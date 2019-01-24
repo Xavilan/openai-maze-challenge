@@ -104,3 +104,6 @@ tmp/
 
 ## sqlite db!
 *.sqlite
+
+## Microsoft Visual Code
+.vscode
