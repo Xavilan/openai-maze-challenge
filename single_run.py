@@ -157,7 +157,7 @@ if __name__ == "__main__":
                         help="Minimum episodes to end the game. Default = 100")
     parser.add_argument('-d', '--debug_mode', action="store_true", default=False,
                         help="Activate debug mode. Default = False")
-    parser.add_argument('-r', '--render_maze', action="store_true", default=True,
+    parser.add_argument('-r', '--no_render_maze', action="store_false", default=True,
                         help="Render the maze. Default = True")
     parser.add_argument('-e', '--enable_recording',  action="store_true", default=False,
                         help="Indicates if it needs to record video of the game. Default = False")
@@ -172,7 +172,7 @@ if __name__ == "__main__":
     MIN_EPISODES = args.min_episodes
     SOLVED_T = MAX_T / 100
     DEBUG_MODE = args.debug_mode
-    RENDER_MAZE = args.render_maze
+    RENDER_MAZE = args.no_render_maze
     ENABLE_RECORDING = args.enable_recording
 
     s = Simulator(agent_name)
