@@ -44,20 +44,33 @@ def pull_agents(repo, branch_list, tmp_path=TMP_PATH, agent_folder=AGENT_FOLDER,
                 fname2 = b + '_' + fname
                 shutil.copyfile(f, os.path.join(agent_folder, fname2))
 
+def reset_base_repo(tmp_path, agent_folder, ignored_agents=IGONRED_AGENTS):
+    if os.path.isdir(tmp_path):
+        # remove temp folder
+        shutil.rmtree(tmp_path)
+    
+    # remove all agents
+    for f in glob.iglob(os.path.join(agent_folder, '*.py')):
+        if os.path.basename(f) not in ignored_agents:
+            os.remove(f)
+
+    # Reset main Repo
+    repo = Repo('.')
+    repo.git.reset()
 
 def prepare_tournament_code(repo_url, tmp_path, ignored_branchs, agent_folder,
                             ignored_agents):
+    reset_base_repo(tmp_path, agent_folder, IGONRED_AGENTS)
     repo = clone_project(repo_url=REPO_URL, path=TMP_PATH)
     branch_list =  get_branch_list(repo, IGONRED_BRANCHS)
     pull_agents(repo, branch_list, tmp_path=TMP_PATH, agent_folder=AGENT_FOLDER, ignored_agents=IGONRED_AGENTS)
 
 
-def reset_base_repo(repo_url, tmp_path):
-    pass
-
 if __name__ == "__main__":
     prepare_tournament_code(repo_url=REPO_URL, tmp_path=TMP_PATH,
                             ignored_branchs=IGONRED_BRANCHS, agent_folder=AGENT_FOLDER,
                             ignored_agents=IGONRED_AGENTS )
+
+    reset_base_repo(TMP_PATH, AGENT_FOLDER, IGONRED_AGENTS)
 
 
