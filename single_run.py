@@ -39,14 +39,14 @@ BASE_AGENT_CLASS_NAME = "BaseAgent"
 class Simulator:
 
     # Initialize the class 
-    def __init__(self, agent_name):
-        self.create_enviroment()
+    def __init__(self, agent_name, render_maze=True):
+        self.create_enviroment(render_maze)
         self.create_agent(agent_name)
 
         self.hello_msg()
 
-    def create_enviroment(self):
-        self.env = gym.make(DEFAULT_MAZE)
+    def create_enviroment(self, render_maze):
+        self.env = gym.make(DEFAULT_MAZE, enable_render=render_maze)
         if ENABLE_RECORDING:
             if os.path.isdir(RECORDING_FOLDER) is False:
                 os.mkdir(RECORDING_FOLDER)
@@ -174,8 +174,9 @@ if __name__ == "__main__":
     DEBUG_MODE = args.debug_mode
     RENDER_MAZE = args.no_render_maze
     ENABLE_RECORDING = args.enable_recording
-
-    s = Simulator(agent_name)
+    
+    print("++++++++", RENDER_MAZE, args.no_render_maze)
+    s = Simulator(agent_name, RENDER_MAZE)
 
     s.run()
     s.close()
