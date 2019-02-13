@@ -1,0 +1,6 @@
+numpy
+pandas
+scikit-learn
+gym
+git+https://github.com/rafaie/gym-maze
+gitpython
