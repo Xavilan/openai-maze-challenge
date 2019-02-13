@@ -20,7 +20,7 @@ TMP_PATH="TEMP"
 IGONRED_BRANCHS=['master', 'development', 'dev_server']
 IGONRED_AGENTS=['base_agent.py', 'example.py', '__init__.py']
 AGENT_FOLDER="agents"
-MAX_AGENT=2
+MAX_AGENTS=2
 
 def clone_project(repo_url, path):
     return Repo.clone_from(repo_url, path)
@@ -35,14 +35,24 @@ def get_branch_list(repo, ignored_branchs=IGONRED_BRANCHS):
                 b_list.append(b)
     return b_list
 
-def pull_agents(repo, branch_list, tmp_path=TMP_PATH, agent_folder=AGENT_FOLDER, ignored_agents=IGONRED_AGENTS):
+def pull_agents(repo, branch_list, tmp_path=TMP_PATH, agent_folder=AGENT_FOLDER, ignored_agents=IGONRED_AGENTS, max_agents=MAX_AGENTS):
     for b in branch_list:
+        print('--------------------------------------')
+        print("Start processing the branch '{}'".format(b))
         repo.git.checkout(b)
-        for f in glob.iglob(os.path.join(tmp_path, agent_folder, "*.py")):
+        files = glob.glob(os.path.join(tmp_path, agent_folder, "*.py"))
+        files.sort(key=os.path.getmtime, reverse=True)
+        counter = 1
+        for f in files:
             fname = os.path.basename(f)
             if  fname not in ignored_agents:
                 fname2 = b + '_' + fname
                 shutil.copyfile(f, os.path.join(agent_folder, fname2))
+                print("Copy file '{}' as a new name '{}' to '{}' folder.".format(fname, fname2, agent_folder))
+                counter += 1
+            if counter > max_agents:
+                print("Max agent is extrated!")
+                break
 
 def reset_base_repo(tmp_path, agent_folder, ignored_agents=IGONRED_AGENTS):
     if os.path.isdir(tmp_path):
@@ -63,7 +73,8 @@ def prepare_tournament_code(repo_url, tmp_path, ignored_branchs, agent_folder,
     reset_base_repo(tmp_path, agent_folder, IGONRED_AGENTS)
     repo = clone_project(repo_url=REPO_URL, path=TMP_PATH)
     branch_list =  get_branch_list(repo, IGONRED_BRANCHS)
-    pull_agents(repo, branch_list, tmp_path=TMP_PATH, agent_folder=AGENT_FOLDER, ignored_agents=IGONRED_AGENTS)
+    pull_agents(repo, branch_list, tmp_path=TMP_PATH, agent_folder=AGENT_FOLDER, 
+                ignored_agents=IGONRED_AGENTS, max_agents=MAX_AGENTS)
 
 
 if __name__ == "__main__":
