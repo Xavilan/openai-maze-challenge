@@ -14,17 +14,33 @@ __maintainer__ = "Mostafa Rafaie"
 # from tqdm import tqdm
 # from multiprocessing import Pool, Lock
 # import numpy as np
-# import sys
 # from score_model import Score, session
 # from datetime import datetime
 import os
 import glob
+import sys
 import argparse
+import importlib
+import gym
+import gym_maze
+
 from collect_agents import prepare_tournament_code, reset_base_repo
 
+# Leaderboard base params
 DEFAULT_AGENTS_PATH = 'agents'
 DEFAULT_CUNCURRENCY = 1
 RUN_TIME_IGONRED_AGENTS=['base_agent.py', '__init__.py']
+
+# game params
+DEFAULT_MAZE = "maze-random-10x10-plus-v0"
+NUM_EPISODES = 100
+MIN_EPISODES = 100
+MAX_T = 10000
+DEBUG_MODE = 0
+RENDER_MAZE = False
+ENABLE_RECORDING = False
+RECORDING_FOLDER = "game_video_logs"
+BASE_AGENT_CLASS_NAME = "BaseAgent"
 
 
 class Leaderboard:
@@ -34,16 +50,93 @@ class Leaderboard:
     def get_agents_list(self):
         lst = []
         for i in glob.glob(os.path.join(self.agents_path, "*.py")):
-            if i not in RUN_TIME_IGONRED_AGENTS:
+            if os.path.basename(i) not in RUN_TIME_IGONRED_AGENTS:
                 lst.append(i)
         return lst
 
-    def create_agents(self, lst):
-        pass
+    def test_agents(self, agents, env):
+        agents2 = []
+
+        for a in agents:
+            print('--------------------------------------')
+            print('Testing the agent:', type(a).__name__)
+
+            try:
+                # test get_info function
+                a.get_info()
+
+                # test reset function
+                obv = env.reset()
+                a.reset(obv)
+
+                # test select action function
+                action = a.select_action()
+
+                # execute the action
+                obv, reward, done, info = env.step(action)
+
+                # test the observe
+                a.observe(obv, reward, done, action)
+
+                # test need_to_stop_episode
+                a.need_to_stop_episode()
+
+                # test need_to_stop_game
+                a.need_to_stop_game()
+
+                print(a.get_info())
+                agents2.append(a)
+            
+            except NotImplementedError:
+                print('Removed from list because of NotImplemented Error')
     
+            except Exception as e:
+                print('Removed from list because of', e)
+
+        return agents2
+
+    def create_agents(self, lst):
+        
+        env = gym.make(DEFAULT_MAZE, enable_render=RENDER_MAZE)
+
+        agents = []
+        for agent_p in lst:
+            print('--------------------------------------')
+            print('processing to load agent:', agent_p)
+            try:
+                # Find class name
+                with open(agent_p, 'r') as fi:
+                    class_name = None
+                    for l in fi.readlines():
+                        n = l.find('class')
+                        if n >= 0:
+                            n = l.find(BASE_AGENT_CLASS_NAME)
+                            if n > 0:
+                                name = l[:n-1].replace('class', '').replace(' ', '')
+
+                                if class_name is None:
+                                    class_name = name
+                                else:
+                                    print("There ate more than one agent class in {}, please store every agent in a new file".format(agent_p))
+
+                # Create agent
+                module_name = agent_p.replace(os.sep, '.').replace('.py', '')
+                class_ = getattr(importlib.import_module(module_name), class_name)
+                agent = class_(DEFAULT_MAZE, NUM_EPISODES, 
+                               env.observation_space.low, env.observation_space.high, 
+                               env.observation_space.shape, env.action_space.n, MAX_T, DEBUG_MODE)
+                
+                agents.append(agent)
+            except Exception as e:
+                print(e)
+
+        agents2 = self.test_agents(agents, env)
+        env.close()
+        return agents2
 
     def get_agents_class(self):
         lst = self.get_agents_list()
+        print(lst)
         agents = self.create_agents(lst)
 
 
@@ -52,7 +145,7 @@ class Leaderboard:
 
     def generate(self, cuncurrency):
         # extract all the agents from branches and prepare the base code for the competition
-        prepare_tournament_code(agents_path=self.agents_path)
+        # prepare_tournament_code(agents_path=self.agents_path)
 
         agents = self.get_agents_class()
 
@@ -60,7 +153,7 @@ class Leaderboard:
 
 
         # rest project
-        reset_base_repo (agents_path=self.agents_path)
+        # reset_base_repo (agents_path=self.agents_path)
 
 
 
