@@ -40,7 +40,7 @@ class Simulator:
 
     # Initialize the class 
     def __init__(self, agent_name, maze, num_episodes, min_episodes, max_t, 
-                 render_maze, enable_recording, debug_mode=False):
+                 render_maze, enable_recording, debug_mode=False, need_agent=True):
         self.agent_name = agent_name
         self.maze = maze
         self.num_episodes = num_episodes
@@ -51,9 +51,9 @@ class Simulator:
         self.debug_mode = debug_mode
 
         self.create_enviroment(render_maze)
-        self.create_agent(agent_name)
-
-        self.hello_msg()
+        if need_agent is True:
+            self.create_agent(agent_name)
+            self.hello_msg()
 
     def create_enviroment(self, render_maze):
         self.env = gym.make(self.maze, enable_render=render_maze)
