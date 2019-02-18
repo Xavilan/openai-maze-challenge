@@ -23,7 +23,8 @@ import argparse
 import importlib
 import gym
 import gym_maze
-
+from multiprocessing import Pool, Lock
+from tqdm import tqdm
 from collect_agents import prepare_tournament_code, reset_base_repo
 
 # Leaderboard base params
@@ -36,6 +37,7 @@ DEFAULT_MAZE = "maze-random-10x10-plus-v0"
 NUM_EPISODES = 100
 MIN_EPISODES = 100
 MAX_T = 10000
+ROUNDS_COUNT=100
 DEBUG_MODE = 0
 RENDER_MAZE = False
 ENABLE_RECORDING = False
@@ -139,7 +141,7 @@ class Leaderboard:
         print(lst)
         agents = self.create_agents(lst)
 
-
+    @classmethod
     def run_a_round(self, agents):
         pass
 
@@ -147,14 +149,15 @@ class Leaderboard:
         # extract all the agents from branches and prepare the base code for the competition
         # prepare_tournament_code(agents_path=self.agents_path)
 
-        agents = self.get_agents_class()
+        self.agents = self.get_agents_class()
 
-
-
-
-        # rest project
-        # reset_base_repo (agents_path=self.agents_path)
-
+        # Run the tournoment
+        Lock()
+        round_results = []
+        pool = Pool(cuncurrency)
+        for d in tqdm(pool.imap_unordered(self.run_a_round, range(ROUNDS_COUNT)),
+                  total=ROUNDS_COUNT):
+            round_results.append(d)
 
 
 
@@ -164,7 +167,7 @@ if __name__ == "__main__":
     parser.add_argument('-p', '--agents_path', default=DEFAULT_AGENTS_PATH,
                         help="Indicates the default path of agents folder")
 
-    parser.add_argument('-c', '--cuncurrency', default=DEFAULT_AGENTS_PATH,
+    parser.add_argument('-c', '--cuncurrency', default=DEFAULT_CUNCURRENCY,
                         help="Indicates the default cuncurrency to generate the leaderboard")
 
     args = parser.parse_args()
