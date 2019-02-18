@@ -26,13 +26,8 @@ class BaseAgent:
     
     # get the agent information
     def get_info(self):
-        return { 
-            'team_name': 'base_team',
-            'team member': 'member1, member2',
-            'version': '1.0.0',
-            'slogan': 'Nothing :-D',
-            'email': 'mostafa.rafaiejokandan@mutualofomaha.com'
-        }
+        print("Subclasses should implement get_info function!")
+        raise NotImplementedError
     
     # Inform the agent that a new episode is started
     def reset(self, obv):
@@ -40,10 +35,12 @@ class BaseAgent:
 
     # request the agent to do an action
     def select_action(self):
-        pass
+        print("Subclasses should implement select_action function!")
+        raise NotImplementedError
 
     def observe(self, obv, reward, done, action):
-        pass
+        print("Subclasses should implement observe function!")
+        raise NotImplementedError
     
     def need_to_stop_episode(self):
         return False
