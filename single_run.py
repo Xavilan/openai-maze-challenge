@@ -112,44 +112,48 @@ class Simulator:
         num_streaks = 0
         total_reward = 0
 
-        for episode in range(self.num_episodes):
+        try:
+            for episode in range(self.num_episodes):
 
-            # Reset the environment
-            obv = self.env.reset()
-            self.agent.reset(obv)
-
-            if self.render_maze is True:
-                self.env.render()
-
-            for t in range(self.max_t):
-                # Select an action
-                action = self.agent.select_action()
-
-                # execute the action
-                obv, reward, done, info = self.env.step(action)
-                total_reward += reward
-
-                # Observe the result
-                self.agent.observe(obv, reward, done, action)
+                # Reset the environment
+                obv = self.env.reset()
+                self.agent.reset(obv)
 
                 if self.render_maze is True:
                     self.env.render()
-                
-                if done:
-                    num_streaks += 1
 
-                if done is True or self.agent.need_to_stop_episode() is True:
-                    break
-            if enable_print is True:
-                print("%s - Episode %d finished after %f time steps with total reward = %f (streak %d)."
-                        % (self.agent_name, episode, t, total_reward, num_streaks))
+                for t in range(self.max_t):
+                    # Select an action
+                    action = self.agent.select_action()
 
-            if episode > self.min_episodes and self.agent.need_to_stop_game() is True:
+                    # execute the action
+                    obv, reward, done, info = self.env.step(action)
+                    total_reward += reward
+
+                    # Observe the result
+                    self.agent.observe(obv, reward, done, action)
+
+                    if self.render_maze is True:
+                        self.env.render()
+                    
+                    if done:
+                        num_streaks += 1
+
+                    if done is True or self.agent.need_to_stop_episode() is True:
+                        break
                 if enable_print is True:
-                    print("Finish the game in episode ", episode)
-                break
+                    print("%s - Episode %d finished after %f time steps with total reward = %f (streak %d)."
+                            % (self.agent_name, episode, t, total_reward, num_streaks))
+
+                if episode > self.min_episodes and self.agent.need_to_stop_game() is True:
+                    if enable_print is True:
+                        print("Finish the game in episode ", episode)
+                    break
+        except Exception as e:
+            print (e)
 
         return [self.agent_name, total_reward, t, episode + 1, num_streaks]
+
 
     def close(self):
         self.env.close()
