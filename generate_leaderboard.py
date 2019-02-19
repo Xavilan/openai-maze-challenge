@@ -25,7 +25,12 @@ import gym
 import gym_maze
 from multiprocessing import Pool, Lock
 from tqdm import tqdm
+import numpy as np
 from collect_agents import prepare_tournament_code, reset_base_repo
+from score_model import Score, session
+from tournament_run import TournamentSimulator
+from datetime import datetime
+from functools import partial
 
 # Leaderboard base params
 DEFAULT_AGENTS_PATH = 'agents'
@@ -37,7 +42,7 @@ DEFAULT_MAZE = "maze-random-10x10-plus-v0"
 NUM_EPISODES = 100
 MIN_EPISODES = 100
 MAX_T = 10000
-ROUNDS_COUNT=100
+ROUNDS_COUNT=2
 DEBUG_MODE = 0
 RENDER_MAZE = False
 ENABLE_RECORDING = False
@@ -139,25 +144,48 @@ class Leaderboard:
     def get_agents_class(self):
         lst = self.get_agents_list()
         print(lst)
-        agents = self.create_agents(lst)
+        return self.create_agents(lst)
+
 
     @classmethod
-    def run_a_round(self, agents):
+    def run_a_round(self, agents, round):
+        t = TournamentSimulator(maze=DEFAULT_MAZE, num_episodes=NUM_EPISODES, 
+                                min_episodes=MIN_EPISODES, max_t=MAX_T, 
+                                render_maze=RENDER_MAZE, enable_recording=ENABLE_RECORDING, 
+                                debug_mode=DEBUG_MODE)
+        r = t.run(agents, enable_print=False)
+        t.close()
+        r = [ [round] + s for s in r]
+        return r
+
+    def export_result(self, result):
         pass
 
     def generate(self, cuncurrency):
         # extract all the agents from branches and prepare the base code for the competition
         # prepare_tournament_code(agents_path=self.agents_path)
 
+        runtime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.agents = self.get_agents_class()
 
         # Run the tournoment
         Lock()
+        round_no = 0
         round_results = []
+        last_score = [0] * len(self.agents)
         pool = Pool(cuncurrency)
-        for d in tqdm(pool.imap_unordered(self.run_a_round, range(ROUNDS_COUNT)),
+        for d in tqdm(pool.imap_unordered(partial(self.run_a_round, self.agents), range(ROUNDS_COUNT)),
                   total=ROUNDS_COUNT):
             round_results.append(d)
+            round_no += 1
+            last_score = [ last_score[i] + d[i][2] for i in range(len(self.agents))] 
+
+            for j in range(len(self.agents)):
+                s = Score(runtime=runtime, round_no=round_no,
+                            title=d[j][1], score=d[j][2],
+                            overal_score=last_score[j])
+                session.add(s)
+            session.commit()
 
 
 
