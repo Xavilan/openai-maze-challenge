@@ -23,6 +23,12 @@ class TournamentSimulator(Simulator):
                          enable_recording=enable_recording, debug_mode=debug_mode,
                          need_agent=False)
 
-    def run(self, agents):
-        pass
- 
+    def run(self, agents, enable_print=False):
+        results = []
+        for a in agents:
+            self.agent = a
+            self.agent_name = a.get_info()['team_name']
+            r = super().run(enable_print)
+            results.append(r)
+
+        return results
