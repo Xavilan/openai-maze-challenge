@@ -108,7 +108,7 @@ class Simulator:
             print('{} : {}'.format(k, info[k]))
 
 
-    def run(self):
+    def run(self, enable_print=True):
         num_streaks = 0
         total_reward = 0
 
@@ -140,15 +140,16 @@ class Simulator:
 
                 if done is True or self.agent.need_to_stop_episode() is True:
                     break
-
-            print("Episode %d finished after %f time steps with total reward = %f (streak %d)."
-                      % (episode, t, total_reward, num_streaks))
+            if enable_print is True:
+                print("%s - Episode %d finished after %f time steps with total reward = %f (streak %d)."
+                        % (self.agent_name, episode, t, total_reward, num_streaks))
 
             if episode > self.min_episodes and self.agent.need_to_stop_game() is True:
-                print("Finish the game in episode ", episode)
+                if enable_print is True:
+                    print("Finish the game in episode ", episode)
                 break
 
-        return [self.agent_name, total_reward, episode + 1, num_streaks]
+        return [self.agent_name, total_reward, t, episode + 1, num_streaks]
 
     def close(self):
         self.env.close()
