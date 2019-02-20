@@ -163,7 +163,7 @@ class Leaderboard:
 
     def generate(self, cuncurrency):
         # extract all the agents from branches and prepare the base code for the competition
-        # prepare_tournament_code(agents_path=self.agents_path)
+        prepare_tournament_code(agents_path=self.agents_path)
 
         runtime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.agents = self.get_agents_class()
@@ -188,7 +188,8 @@ class Leaderboard:
                 session.add(s)
             session.commit()
 
-        print(round_results)
+        self.export_result(round_results)
+        reset_base_repo()
 
 
 if __name__ == "__main__":
