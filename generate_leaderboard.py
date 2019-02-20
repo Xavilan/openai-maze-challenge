@@ -10,12 +10,6 @@ __author__ = "Mostafa Rafaie"
 __maintainer__ = "Mostafa Rafaie"
 
 
-# import pandas as pd
-# from tqdm import tqdm
-# from multiprocessing import Pool, Lock
-# import numpy as np
-# from score_model import Score, session
-# from datetime import datetime
 import os
 import glob
 import sys
@@ -26,11 +20,19 @@ import gym_maze
 from multiprocessing import Pool, Lock
 from tqdm import tqdm
 import numpy as np
+import pandas as pd
+from datetime import datetime
+from functools import partial
+from collections import defaultdict
+from sqlalchemy.inspection import inspect
+import matplotlib.pyplot as plt
+from matplotlib import pylab
+import seaborn as sn
+from pylab import savefig
 from collect_agents import prepare_tournament_code, reset_base_repo
 from score_model import Score, session
 from tournament_run import TournamentSimulator
-from datetime import datetime
-from functools import partial
+
 
 # Leaderboard base params
 DEFAULT_AGENTS_PATH = 'agents'
@@ -158,8 +160,43 @@ class Leaderboard:
         r = [ [round] + s for s in r]
         return r
 
-    def export_result(self, result):
-        pass
+    def rset_to_dataframe(self, rset):
+        result = defaultdict(list)
+        for obj in rset:
+            instance = inspect(obj)
+            for key, x in instance.attrs.items():
+                result[key].append(x.value)
+        return pd.DataFrame(result)
+
+    def export_result(self, runtime):
+        rset = session.query(Score) \
+                       .filter(Score.runtime == runtime)\
+                       .order_by(Score.id.desc()).all()
+
+        df = self.rset_to_dataframe(rset)
+        df.rename(columns={'team_name':'Team Name'}, inplace=True)
+
+        plt.close("all")
+        plt.rcParams['figure.figsize']=(10,5)
+        sn.set(style="whitegrid")
+        p = sn.lineplot(x='round_no', y='overal_score', hue="Team Name", data=df)
+
+        # Update titles
+        plt.title('OpenAI Maze Challenge - Data Science COP (' + runtime + ')')
+        plt.xlabel('Round')
+        plt.ylabel('Overal Score')
+
+
+        # Put a legend to the right side
+        box = p.get_position()
+        p.set_position([box.x0 -0.025, box.y0, box.width * 0.85, box.height]) # resize position
+        p.legend(loc='center right', bbox_to_anchor=(1.32, 0.5), ncol=1)
+
+        if os.path.exists("fig") is False:
+            os.mkdir("fig")
+        figure = p.get_figure()
+        figure.savefig(os.path.join("fig", 'result_' + runtime + '.png'), dpi=400)
+
 
     def generate(self, cuncurrency):
         # extract all the agents from branches and prepare the base code for the competition
@@ -188,7 +225,7 @@ class Leaderboard:
                 session.add(s)
             session.commit()
 
-        self.export_result(round_results)
+        self.export_result(runtime)
         reset_base_repo()
 
 
