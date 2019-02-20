@@ -40,7 +40,7 @@ class Score(Base):
             'id': str(self.id),
             'round_no': str(self.round_no),
             'runtime': self.runtime,
-            'team_name': self.title,
+            'team_name': self.team_name,
             'score': round(self.score, 4),
             'overal_score': round(self.overal_score, 4),
             'extra': self.extra,

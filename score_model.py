@@ -17,13 +17,16 @@ class Score(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     runtime = Column(String(250))
     round_no = Column(Integer)
-    title = Column(String(250))
-    n_bandits = Column(Integer)
-    b_alpha = Column(Integer)
-    b_beta = Column(Integer)
+    team_name = Column(String(250))
     score = Column(Float, default=0)
     overal_score = Column(Float, default=0)
     extra = Column(String(250))
+    param_int1 = Column(Integer)
+    param_int2 = Column(Integer)
+    param_int3 = Column(Integer)
+    param_str1 = Column(String(250))
+    param_str2 = Column(String(250))
+    param_str3 = Column(String(250))
 
     created_at = Column(DateTime(), default=datetime.datetime.utcnow)
 
@@ -37,13 +40,16 @@ class Score(Base):
             'id': str(self.id),
             'round_no': str(self.round_no),
             'runtime': self.runtime,
-            'title': self.title,
-            'n_bandits': self.n_bandits,
-            'b_alpha': round(self.b_alpha, 6),
-            'b_beta': round(self.b_beta, 6),
+            'team_name': self.team_name,
             'score': round(self.score, 4),
             'overal_score': round(self.overal_score, 4),
             'extra': self.extra,
+            'param_int1': str(self.param_int1),
+            'param_int2': str(self.param_int2),
+            'param_int3': str(self.param_int3),
+            'param_str1': str(self.param_str1),
+            'param_str2': str(self.param_str2),
+            'param_str3': str(self.param_str3),
             'created_at': str(self.created_at)
         }
 
