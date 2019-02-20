@@ -1,6 +1,6 @@
 # Scoreboard for the Data Science COP Programming Challenge
 
-##Web Interface - Live mode:
+## Web Interface - Live mode:
 
 **score_model.py** The data object class to store scores. Using the SQLAlchemy, 
 it's configured to store all the data in an SQLite database.
