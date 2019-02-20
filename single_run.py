@@ -17,6 +17,8 @@ import argparse
 import glob
 import os
 import importlib
+import traceback
+from datetime import datetime
 
 import gym
 import gym_maze
@@ -150,7 +152,15 @@ class Simulator:
                         print("Finish the game in episode ", episode)
                     break
         except Exception as e:
-            print (e)
+            if enable_print is True:
+                traceback.print_exc()
+            else:
+                if not os.path.isdir('logs'):
+                    os.mkdir("logs")
+                runtime = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+                fname = self.agent.get_info()['team_name'] + '_' + runtime + '_err.log'
+                with open(os.path.join("logs", fname ), 'w') as fi:
+                    fi.write(traceback.format_exc())
 
         return [self.agent_name, total_reward, t, episode + 1, num_streaks]
 
