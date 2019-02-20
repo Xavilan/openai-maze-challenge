@@ -42,7 +42,7 @@ DEFAULT_MAZE = "maze-random-10x10-plus-v0"
 NUM_EPISODES = 100
 MIN_EPISODES = 100
 MAX_T = 10000
-ROUNDS_COUNT=2
+ROUNDS_COUNT=100
 DEBUG_MODE = 0
 RENDER_MAZE = False
 ENABLE_RECORDING = False
@@ -182,11 +182,13 @@ class Leaderboard:
 
             for j in range(len(self.agents)):
                 s = Score(runtime=runtime, round_no=round_no,
-                            title=d[j][1], score=d[j][2],
-                            overal_score=last_score[j])
+                          team_name=d[j][1], score=d[j][2],
+                          overal_score=last_score[j],
+                          param_int1=d[j][3])
                 session.add(s)
             session.commit()
 
+        print(round_results)
 
 
 if __name__ == "__main__":
