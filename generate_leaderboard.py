@@ -179,12 +179,12 @@ class Leaderboard:
         plt.close("all")
         plt.rcParams['figure.figsize']=(10,5)
         sn.set(style="whitegrid")
-        p = sn.lineplot(x='round_no', y='overal_score', hue="Team Name", data=df)
+        p = sn.lineplot(x='round_no', y='overall_score', hue="Team Name", data=df)
 
         # Update titles
         plt.title('OpenAI Maze Challenge - Data Science COP (' + runtime + ')')
         plt.xlabel('Round')
-        plt.ylabel('Overal Score')
+        plt.ylabel('Overall Score')
 
 
         # Put a legend to the right side
@@ -220,7 +220,7 @@ class Leaderboard:
             for j in range(len(self.agents)):
                 s = Score(runtime=runtime, round_no=round_no,
                           team_name=d[j][1], score=d[j][2],
-                          overal_score=last_score[j],
+                          overall_score=last_score[j],
                           param_int1=d[j][3])
                 session.add(s)
             session.commit()

@@ -73,7 +73,7 @@ def create_chart_data(data, player_count):
                                 }
             counter += 1
 
-        dataset[d.team_name]['data'].append(round(d.overal_score, 4))
+        dataset[d.team_name]['data'].append(round(d.overall_score, 4))
 
     dataset_list = []
     for key in dataset:
@@ -157,7 +157,7 @@ def last_result():
     for sc in sc_all:
         details.append(sc.json)
         if counter < player_count:
-            ranking.append([sc.team_name, round(sc.overal_score, 4)])
+            ranking.append([sc.team_name, round(sc.overall_score, 4)])
             counter += 1
 
     resp['details'] = details
