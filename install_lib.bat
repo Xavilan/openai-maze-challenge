@@ -1,17 +1,9 @@
+REM It eases the installation of the libs on Mac and Linux 
 
-rem It eases the installation of the libs on Mac and Linux 
+REM install main libs
+conda install numpy pandas scikit-learn
+conda install gym
 
-rem install main libs
-pip install numpy pandas scikit-learn
-pip install gym
+REM install maze lib
+pip install git+https://github.com/rafaie/gym-maze
 
-rem install maze lib
-md -p tmp
-cd tmp
-git clone https://github.com/rafaie/gym-maze
-cd gym-maze
-python setup.py install
-cd ../..
-rem rm -rf tmp/gym-maze  && rm -rf tmp
-
-pip freeze
