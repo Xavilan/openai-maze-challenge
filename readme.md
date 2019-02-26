@@ -21,4 +21,6 @@ The maze is reset when the agent reaches the goal.
 * 10 cells x 10 cells: _MazeEnvRandom10x10_
 
 ## Installation
-It should work on both Python 3.4+. It requires pygame and numpy. 
+It should work on both Python 3.4+. It requires pygame and numpy.
+
+# How to run it
