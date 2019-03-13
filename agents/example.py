@@ -6,7 +6,7 @@ base_agent.py: It is an example agaent
 
 """
 
-__copyright__ = "Copyright 2018, MoM"
+__copyright__ = "Copyright 2018, MoO"
 __license__ = ""
 __author__ = "Mostafa Rafaie"
 __maintainer__ = "Mostafa Rafaie"
