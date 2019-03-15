@@ -176,11 +176,11 @@ if __name__ == "__main__":
                         "Example: agents/agent1.py, agent1.py, agent1")
     parser.add_argument('-m', '--maze', default=DEFAULT_MAZE,
                         help="Indicates the maze type. Default = maze-random-10x10-plus-v0")
-    parser.add_argument('-n', '--num_episodes', default=NUM_EPISODES,
+    parser.add_argument('-n', '--num_episodes', default=NUM_EPISODES, type=int,
                         help="Indicates the number of episodes. Default = 250")
-    parser.add_argument('-t', '--max_t', default=MAX_T1,
+    parser.add_argument('-t', '--max_t', default=MAX_T1, type=int,
                         help="Maximum action in an episode. Default = 10000")
-    parser.add_argument('-p', '--min_episodes', default=MIN_EPISODES,
+    parser.add_argument('-p', '--min_episodes', default=MIN_EPISODES, type=int,
                         help="Minimum episodes to end the game. Default = 100")
     parser.add_argument('-d', '--debug_mode', action="store_true", default=False,
                         help="Activate debug mode. Default = False")
