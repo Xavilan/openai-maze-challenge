@@ -5,7 +5,7 @@ base_agent.py: Base agent class. All the new class needs to inherit from
 
 """
 
-__copyright__ = "Copyright 2018, MoM"
+__copyright__ = "Copyright 2018, MoO"
 __license__ = ""
 __author__ = "Mostafa Rafaie"
 __maintainer__ = "Mostafa Rafaie"
