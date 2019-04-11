@@ -45,7 +45,7 @@ class Xavilan(BaseAgent):
 
         # A variable for keeping the minimum exploration rate and learning rate
         self.MIN_EXPLORE_RATE = 0.001
-        self.MIN_LEARNING_RATE = 0.2
+        self.MIN_LEARNING_RATE = 1.0 # Maze is deterministic, so set learning rate to 1.0
 
         # It's a decay factor to change the exploration and exploitation rate in every step.
         # for this example, it generates 10.0
@@ -108,9 +108,9 @@ class Xavilan(BaseAgent):
         return { 
             'team_name': 'Xavilan',
             'team member': 'Dan Freimund',
-            'version': '1.0.0',
-            'slogan': '',
-            'email': ''
+            'version': '1.0.2',
+            'slogan': 'Propter quod vincere!',
+            'email': 'daniel.freimund@mutualofomaha.com'
         }
     
     # Inform the agent that a new episode is started
@@ -182,3 +182,5 @@ class Xavilan(BaseAgent):
     # Generate a learning rate dependent on the steps of an episode by using a logarithmic equation
     def get_learning_rate(self, t):
         return max(self.MIN_LEARNING_RATE, min(0.8, 1.0 - math.log10((t+1)/self.DECAY_FACTOR)))
+
+#04/11/2019 04:14pm: Changed learning rate to 1.0 because the maze is deterministic
