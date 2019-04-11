@@ -64,7 +64,7 @@ class Xavilan(BaseAgent):
         # than those received later (reflecting the value of a "good start"). It may also be interpreted 
         # as the probability to succeed (or survive) at every step.
         # https://en.wikipedia.org/wiki/Q-learning#Discount_factor
-        self.discount_factor = 0.99
+        self.discount_factor = 1.00 # No discount factor. Step punishment and final reward all the same.
 
         # Keep the number of tries (episodes)
         self.tries = 0
@@ -108,7 +108,7 @@ class Xavilan(BaseAgent):
         return { 
             'team_name': 'Xavilan',
             'team member': 'Dan Freimund',
-            'version': '1.0.2',
+            'version': '1.0.3',
             'slogan': 'Propter quod vincere!',
             'email': 'daniel.freimund@mutualofomaha.com'
         }
@@ -145,10 +145,10 @@ class Xavilan(BaseAgent):
 
         # Update the Q-Table based on the result. 
         # Actually, it just updates a Q(the previous state + decided action)
-        # It's based on Q-Learning algorithem.
+        # It's based on Q-Learning algorithm.
         # https://en.wikipedia.org/wiki/Q-learning
-        # self.q_table[self.state_0 + (action,)] : It refere to the specific action on a state. 
-        #                                          Don't forgot that that action is the last dimention of the q-table
+        # self.q_table[self.state_0 + (action,)] : It refers to the specific action on a state. 
+        #                                          Don't forget that the action is the last dimension of the q-table
         # best_q also returns the q value of the best possible action in the new state.
         best_q = np.amax(self.q_table[state])
         self.q_table[self.state_0 + (action,)] += self.learning_rate * (reward + self.discount_factor * (best_q) - self.q_table[self.state_0 + (action,)])
@@ -184,3 +184,4 @@ class Xavilan(BaseAgent):
         return max(self.MIN_LEARNING_RATE, min(0.8, 1.0 - math.log10((t+1)/self.DECAY_FACTOR)))
 
 #04/11/2019 04:14pm: Changed learning rate to 1.0 because the maze is deterministic
+#04/11/2019 06:41pm: No discount factor. Step punishment and final reward all the same.
