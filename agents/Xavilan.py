@@ -41,31 +41,35 @@ class Xavilan(BaseAgent):
         # Create q-table which is used in the Q-Learning algorithm.
         # It builds a multi-dimensional array derived from maze dimension + possible actions.
         # For this example, it establishes a 3-dimensional array with this size [10, 10, 4].
-        self.q_table = np.zeros(self.maze_size + (self.space_action_n,), dtype=float)
+        self.q_table = np.zeros(self.maze_size + (2,self.space_action_n), dtype=float) #[][][][0] is reward, [][][][1] is visit indicator
         
         #Initialize the q_table as if there were no walls or teleporters
         for i in range(len(self.q_table)):  #Columns
-        	  for j in range(len(self.q_table[i])):  #Rows
-        	  	  #North
-        	  	  if j==0:
-        	  	  		self.q_table[i][j][0]=-1  #Wall
-        	  	  else:
-        	  	  		self.q_table[i][j][0]=1-(len(self.q_table)-1-i+len(self.q_table)-1-j+1)*.1/len(self.q_table)**2
-        	  	 	#South
-        	  	  if j==len(self.q_table)-1:
-        	  	  		self.q_table[i][j][1]=-1  #Wall
-        	  	  else:
-        	  	  		self.q_table[i][j][1]=1-(len(self.q_table)-1-i+len(self.q_table)-1-j-1)*.1/len(self.q_table)**2
-        	  	  #East
-        	  	  if i==len(self.q_table)-1:
-        	  	  		self.q_table[i][j][2]=-1  #Wall
-        	  	  else:
-        	  	  		self.q_table[i][j][2]=1-(len(self.q_table)-1-i+len(self.q_table)-1-j-1)*.1/len(self.q_table)**2
-        	  	  #West
-        	  	  if i==0:
-        	  	  		self.q_table[i][j][3]=-1  #Wall
-        	  	  else:
-        	  	  		self.q_table[i][j][3]=1-(len(self.q_table)-1-i+len(self.q_table)-1-j+1)*.1/len(self.q_table)**2
+              for j in range(len(self.q_table[i])):  #Rows
+                    #North
+                    if j==0:
+                            self.q_table[i][j][0][0]=-1  #Wall
+                            self.q_table[i][j][1][0]=1 #Visited
+                    else:
+                            self.q_table[i][j][0][0]=1-(len(self.q_table)-1-i+len(self.q_table)-1-j+1)*.1/len(self.q_table)**2
+                       #South
+                    if j==len(self.q_table)-1:
+                            self.q_table[i][j][0][1]=-1  #Wall
+                            self.q_table[i][j][1][1]=1 #Visited
+                    else:
+                            self.q_table[i][j][0][1]=1-(len(self.q_table)-1-i+len(self.q_table)-1-j-1)*.1/len(self.q_table)**2
+                    #East
+                    if i==len(self.q_table)-1:
+                            self.q_table[i][j][0][2]=-1  #Wall
+                            self.q_table[i][j][1][2]=1 #Visited
+                    else:
+                            self.q_table[i][j][0][2]=1-(len(self.q_table)-1-i+len(self.q_table)-1-j-1)*.1/len(self.q_table)**2
+                    #West
+                    if i==0:
+                            self.q_table[i][j][0][3]=-1  #Wall
+                            self.q_table[i][j][1][3]=1 #Visited
+                    else:
+                            self.q_table[i][j][0][3]=1-(len(self.q_table)-1-i+len(self.q_table)-1-j+1)*.1/len(self.q_table)**2
 
         # A variable for keeping the minimum exploration rate and learning rate
         self.MIN_EXPLORE_RATE = 0.001
@@ -157,18 +161,29 @@ class Xavilan(BaseAgent):
         if randx < self.explore_rate:
             
             action = int(np.random.uniform(0,4))
-            if self.q_table[self.state_0+(action,)]==-1: #if a wall move to next action
-            	action=(action+1)%4  #stay within 0 to 3
-            	if self.q_table[self.state_0+(action,)]==-1:
-            		action=(action+1)%4
-            		if self.q_table[self.state_0+(action,)]==-1:
-            		    action=(action+1)%4
-            		    if self.q_table[self.state_0+(action,)]==-1:
-            		        action=(action)+1%4
-            		
+            if self.q_table[self.state_0+(1,action)]==1: #if already visited move to next action
+             action=(action+1)%4  #stay within 0 to 3
+             if self.q_table[self.state_0+(1,action)]==1:
+                    action=(action+1)%4
+                    if self.q_table[self.state_0+(1,action)]==1:
+                        action=(action+1)%4
+                        if self.q_table[self.state_0+(1,action)]==1:
+                            action = int(np.argmax(self.q_table[self.state_0][0]))
+#                            action=(action+1)%4 #back to original choice
+#                            if self.q_table[self.state_0+(0,action)]==-1: #if a wall move to next action
+#                                action=(action+1)%4  #stay within 0 to 3
+#                                if self.q_table[self.state_0+(0,action)]==-1:
+#                                    action=(action+1)%4
+#                                    if self.q_table[self.state_0+(0,action)]==-1:
+#                                        action=(action+1)%4
+#                                        if self.q_table[self.state_0+(0,action)]==-1:
+#                                            action=(action+1)%4 #back to original choice
+#                                            if self.q_table[self.state_0+(0,action)]==-1:
+#                                                action=(action+1)%4 #back to original choice
+                                    
         # Select the action with the highest q from Q-table
         else:
-            action = int(np.argmax(self.q_table[self.state_0]))
+            action = int(np.argmax(self.q_table[self.state_0][0]))
 
         return action
 
@@ -188,26 +203,30 @@ class Xavilan(BaseAgent):
         # best_q also returns the q value of the best possible action in the new state.
         
         if action==0: #North
-        		oppAction=1
-        		oppState=(self.state_0[0],self.state_0[1]-1)
+                oppAction=1
+                oppState=(self.state_0[0],self.state_0[1]-1)
         if action==1: #South
-        		oppAction=0
-        		oppState=(self.state_0[0],self.state_0[1]+1)
+                oppAction=0
+                oppState=(self.state_0[0],self.state_0[1]+1)
         if action==2: #East
-        		oppAction=3
-        		oppState=(self.state_0[0]+1,self.state_0[1])
+                oppAction=3
+                oppState=(self.state_0[0]+1,self.state_0[1])
         if action==3: #West
-        		oppAction=2
-        		oppState=(self.state_0[0]-1,self.state_0[1])
+                oppAction=2
+                oppState=(self.state_0[0]-1,self.state_0[1])
 
         if state==self.state_0: #Hit a wall
-        		self.q_table[self.state_0 + (action,)]=-1 #It's a wall.
-        		self.q_table[oppState + (oppAction,)]=-1 #It's a wall.
+                self.q_table[self.state_0 + (0,action)]=-1 #It's a wall.
+                self.q_table[self.state_0 + (1,action)]=1 #Visited
+                self.q_table[oppState + (0,oppAction)]=-1 #It's a wall.
+                self.q_table[oppState + (1,oppAction)]=1 #Visited
         else:  #Didn't hit a wall
-        		best_q = np.amax(self.q_table[state])
-        		self.q_table[self.state_0 + (action,)] += self.learning_rate * (reward + self.discount_factor * (best_q) - self.q_table[self.state_0 + (action,)])
-        		oppBest_q = np.amax(self.q_table[self.state_0])
-        		self.q_table[oppState + (oppAction,)] += self.learning_rate * (reward + self.discount_factor * (oppBest_q) - self.q_table[oppState + (oppAction,)])
+                best_q = np.amax(self.q_table[state][0])
+                self.q_table[self.state_0 + (0,action)] += self.learning_rate * (reward + self.discount_factor * (best_q) - self.q_table[self.state_0 + (0,action)])
+                self.q_table[self.state_0 + (1,action)]=1 #Visited
+                oppBest_q = np.amax(self.q_table[self.state_0][0])
+                self.q_table[oppState + (0,oppAction)] += self.learning_rate * (reward + self.discount_factor * (oppBest_q) - self.q_table[oppState + (0,oppAction)])
+                self.q_table[oppState + (1,oppAction)]=1 #Visited
 
         # Setting up for the next iteration and update the current state
         self.state_0 = self.state_to_bucket(obv)
@@ -247,3 +266,4 @@ class Xavilan(BaseAgent):
 #04/12/2019 10:46am: Added wall memorizing, but not from the other side yet.
 #04/12/2019 12:31pm: Fixed initial q bug. Fixed random wall avoidance.
 #04/12/2019 01:21pm: Update the q of the attempted state and opposite action.
+#04/12/2019 02:33pm: Remembers where it's been.
