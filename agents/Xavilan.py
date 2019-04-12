@@ -187,19 +187,27 @@ class Xavilan(BaseAgent):
         #                                          Don't forget that the action is the last dimension of the q-table
         # best_q also returns the q value of the best possible action in the new state.
         
-        if state==self.state_0:
+        if action==0: #North
+        		oppAction=1
+        		oppState=(self.state_0[0],self.state_0[1]-1)
+        if action==1: #South
+        		oppAction=0
+        		oppState=(self.state_0[0],self.state_0[1]+1)
+        if action==2: #East
+        		oppAction=3
+        		oppState=(self.state_0[0]+1,self.state_0[1])
+        if action==3: #West
+        		oppAction=2
+        		oppState=(self.state_0[0]-1,self.state_0[1])
+
+        if state==self.state_0: #Hit a wall
         		self.q_table[self.state_0 + (action,)]=-1 #It's a wall.
-        		if action==0: #North
-        				self.q_table[self.state_0[0]][self.state_0[1]-1][1]=-1 #South of cell to the North is also a wall
-        		if action==1: #South
-        				self.q_table[self.state_0[0]][self.state_0[1]+1][0]=-1 #North of cell to the South is also a wall
-        		if action==2: #East
-        				self.q_table[self.state_0[0]+1][self.state_0[1]][3]=-1 #West of cell to the East is also a wall
-        		if action==3: #West
-        				self.q_table[self.state_0[0]-1][self.state_0[1]][2]=-1 #East of cell to the West is also a wall
-        else:
+        		self.q_table[oppState + (oppAction,)]=-1 #It's a wall.
+        else:  #Didn't hit a wall
         		best_q = np.amax(self.q_table[state])
         		self.q_table[self.state_0 + (action,)] += self.learning_rate * (reward + self.discount_factor * (best_q) - self.q_table[self.state_0 + (action,)])
+        		oppBest_q = np.amax(self.q_table[self.state_0])
+        		self.q_table[oppState + (oppAction,)] += self.learning_rate * (reward + self.discount_factor * (oppBest_q) - self.q_table[oppState + (oppAction,)])
 
         # Setting up for the next iteration and update the current state
         self.state_0 = self.state_to_bucket(obv)
@@ -238,3 +246,4 @@ class Xavilan(BaseAgent):
 #04/12/2019 10:28am: Added avoiding walls.
 #04/12/2019 10:46am: Added wall memorizing, but not from the other side yet.
 #04/12/2019 12:31pm: Fixed initial q bug. Fixed random wall avoidance.
+#04/12/2019 01:21pm: Update the q of the attempted state and opposite action.
