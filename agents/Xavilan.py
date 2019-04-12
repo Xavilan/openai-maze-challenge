@@ -185,8 +185,12 @@ class Xavilan(BaseAgent):
         # self.q_table[self.state_0 + (action,)] : It refers to the specific action on a state. 
         #                                          Don't forget that the action is the last dimension of the q-table
         # best_q also returns the q value of the best possible action in the new state.
-        best_q = np.amax(self.q_table[state])
-        self.q_table[self.state_0 + (action,)] += self.learning_rate * (reward + self.discount_factor * (best_q) - self.q_table[self.state_0 + (action,)])
+        
+        if state==self.state_0:
+        		self.q_table[self.state_0 + (action,)]=-1
+        else:
+        		best_q = np.amax(self.q_table[state])
+        		self.q_table[self.state_0 + (action,)] += self.learning_rate * (reward + self.discount_factor * (best_q) - self.q_table[self.state_0 + (action,)])
 
         # Setting up for the next iteration and update the current state
         self.state_0 = self.state_to_bucket(obv)
@@ -223,3 +227,4 @@ class Xavilan(BaseAgent):
 #04/11/2019 09:04pm: #Initialize the q_table as if there were no walls or teleporters
 #04/12/2019 08:37am: Added the outer walls as a -1.
 #04/12/2019 10:28am: Added avoiding walls.
+#04/12/2019 10:46am: Added wall memorizing, but not from the other side yet.
