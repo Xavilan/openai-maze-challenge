@@ -44,25 +44,25 @@ class Xavilan(BaseAgent):
         self.q_table = np.zeros(self.maze_size + (self.space_action_n,), dtype=float)
         
         #Initialize the q_table as if there were no walls or teleporters
-        for i in range(len(self.q_table)):
-        	  for j in range(len(self.q_table[i])):
+        for i in range(len(self.q_table)):  #Columns
+        	  for j in range(len(self.q_table[i])):  #Rows
         	  	  #North
-        	  	  if i==0:
+        	  	  if j==0:
         	  	  		self.q_table[i][j][0]=-1  #Wall
         	  	  else:
         	  	  		self.q_table[i][j][0]=1-(len(self.q_table)-1-i+len(self.q_table)-1-j+1)/.1/(len(self.q_table))**2
         	  	 	#South
-        	  	  if i==len(self.q_table)-1:
+        	  	  if j==len(self.q_table)-1:
         	  	  		self.q_table[i][j][1]=-1  #Wall
         	  	  else:
         	  	  		self.q_table[i][j][1]=1-(len(self.q_table)-1-i+len(self.q_table)-1-j-1)/.1/(len(self.q_table))**2
         	  	  #East
-        	  	  if j==len(self.q_table)-1:
+        	  	  if i==len(self.q_table)-1:
         	  	  		self.q_table[i][j][2]=-1  #Wall
         	  	  else:
         	  	  		self.q_table[i][j][2]=1-(len(self.q_table)-1-i+len(self.q_table)-1-j+1)/.1/(len(self.q_table))**2
         	  	  #West
-        	  	  if j==0:
+        	  	  if i==0:
         	  	  		self.q_table[i][j][3]=-1  #Wall
         	  	  else:
         	  	  		self.q_table[i][j][3]=1-(len(self.q_table)-1-i+len(self.q_table)+1-j+1)/.1/(len(self.q_table))**2
@@ -132,7 +132,7 @@ class Xavilan(BaseAgent):
         return { 
             'team_name': 'Xavilan',
             'team member': 'Dan Freimund',
-            'version': '1.0.3',
+            'version': '1.1.0',
             'slogan': 'Propter quod vincere!',
             'email': 'daniel.freimund@mutualofomaha.com'
         }
@@ -155,6 +155,17 @@ class Xavilan(BaseAgent):
         # Select a random action
         if random.random() < self.explore_rate:
             action = int(np.random.uniform(0,4))
+            if self.q_table[self.state_0+(action,)]==-1: #if a wall move to next action
+            		action=(action+1)%4  #stay within 0 to 3
+            elif self.q_table[self.state_0+(action,)]==-1:
+            		action=(action+1)%4
+            elif self.q_table[self.state_0+(action,)]==-1:
+            		action=(action+1)%4
+            elif self.q_table[self.state_0+(action,)]==-1:
+            		action=(action)+1%4
+            else:
+            	action=action #Surrounded by 4 walls, isolated teleporter with no way out???
+            		
         # Select the action with the highest q from Q-table
         else:
             action = int(np.argmax(self.q_table[self.state_0]))
@@ -211,3 +222,4 @@ class Xavilan(BaseAgent):
 #04/11/2019 06:41pm: No discount factor. Step punishment and final reward all the same.
 #04/11/2019 09:04pm: #Initialize the q_table as if there were no walls or teleporters
 #04/12/2019 08:37am: Added the outer walls as a -1.
+#04/12/2019 10:28am: Added avoiding walls.
