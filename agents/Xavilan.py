@@ -46,10 +46,26 @@ class Xavilan(BaseAgent):
         #Initialize the q_table as if there were no walls or teleporters
         for i in range(len(self.q_table)):
         	  for j in range(len(self.q_table[i])):
-        	  	  self.q_table[i][j][0]=1-(len(self.q_table)-i+len(self.q_table)-j+1)/.1/(len(self.q_table)+1)**2
-        	  	  self.q_table[i][j][1]=1-(len(self.q_table)-i+len(self.q_table)-j-1)/.1/(len(self.q_table)+1)**2
-        	  	  self.q_table[i][j][2]=1-(len(self.q_table)-i+len(self.q_table)-j-1)/.1/(len(self.q_table)+1)**2
-        	  	  self.q_table[i][j][3]=1-(len(self.q_table)-i+len(self.q_table)-j+1)/.1/(len(self.q_table)+1)**2
+        	  	  #North
+        	  	  if i==0:
+        	  	  		self.q_table[i][j][0]=-1  #Wall
+        	  	  else:
+        	  	  		self.q_table[i][j][0]=1-(len(self.q_table)-1-i+len(self.q_table)-1-j+1)/.1/(len(self.q_table))**2
+        	  	 	#South
+        	  	  if i==len(self.q_table)-1:
+        	  	  		self.q_table[i][j][1]=-1  #Wall
+        	  	  else:
+        	  	  		self.q_table[i][j][1]=1-(len(self.q_table)-1-i+len(self.q_table)-1-j-1)/.1/(len(self.q_table))**2
+        	  	  #East
+        	  	  if j==len(self.q_table)-1:
+        	  	  		self.q_table[i][j][2]=-1  #Wall
+        	  	  else:
+        	  	  		self.q_table[i][j][2]=1-(len(self.q_table)-1-i+len(self.q_table)-1-j+1)/.1/(len(self.q_table))**2
+        	  	  #West
+        	  	  if j==0:
+        	  	  		self.q_table[i][j][3]=-1  #Wall
+        	  	  else:
+        	  	  		self.q_table[i][j][3]=1-(len(self.q_table)-1-i+len(self.q_table)+1-j+1)/.1/(len(self.q_table))**2
 
         # A variable for keeping the minimum exploration rate and learning rate
         self.MIN_EXPLORE_RATE = 0.001
@@ -194,3 +210,4 @@ class Xavilan(BaseAgent):
 #04/11/2019 04:14pm: Changed learning rate to 1.0 because the maze is deterministic
 #04/11/2019 06:41pm: No discount factor. Step punishment and final reward all the same.
 #04/11/2019 09:04pm: #Initialize the q_table as if there were no walls or teleporters
+#04/12/2019 08:37am: Added the outer walls as a -1.
