@@ -6,7 +6,7 @@ Xavilan.py: Dan Freimund's agent started from an example agent
 
 """
 
-__copyright__ = "Copyright 2018, MoO"
+__copyright__ = "Copyright 2019, MoO"
 __license__ = ""
 __author__ = "Dan Freimund"
 __maintainer__ = "Dan Freimund"
@@ -42,6 +42,14 @@ class Xavilan(BaseAgent):
         # It builds a multi-dimensional array derived from maze dimension + possible actions.
         # For this example, it establishes a 3-dimensional array with this size [10, 10, 4].
         self.q_table = np.zeros(self.maze_size + (self.space_action_n,), dtype=float)
+        
+        #Initialize the q_table as if there were no walls or teleporters
+        for i in range(len(self.q_table)):
+        	  for j in range(len(self.q_table[i])):
+        	  	  self.q_table[i][j][0]=1-(len(self.q_table)-i+len(self.q_table)-j+1)/.1/(len(self.q_table)+1)**2
+        	  	  self.q_table[i][j][1]=1-(len(self.q_table)-i+len(self.q_table)-j-1)/.1/(len(self.q_table)+1)**2
+        	  	  self.q_table[i][j][2]=1-(len(self.q_table)-i+len(self.q_table)-j-1)/.1/(len(self.q_table)+1)**2
+        	  	  self.q_table[i][j][3]=1-(len(self.q_table)-i+len(self.q_table)-j+1)/.1/(len(self.q_table)+1)**2
 
         # A variable for keeping the minimum exploration rate and learning rate
         self.MIN_EXPLORE_RATE = 0.001
@@ -185,3 +193,4 @@ class Xavilan(BaseAgent):
 
 #04/11/2019 04:14pm: Changed learning rate to 1.0 because the maze is deterministic
 #04/11/2019 06:41pm: No discount factor. Step punishment and final reward all the same.
+#04/11/2019 09:04pm: #Initialize the q_table as if there were no walls or teleporters
