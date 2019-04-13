@@ -45,31 +45,34 @@ class Xavilan(BaseAgent):
         
         #Initialize the q_table as if there were no walls or teleporters
         for i in range(len(self.q_table)):  #Columns
-              for j in range(len(self.q_table[i])):  #Rows
-                    #North
-                    if j==0:
-                            self.q_table[i][j][0][0]=-1  #Wall
-                            self.q_table[i][j][1][0]=1 #Visited
-                    else:
-                            self.q_table[i][j][0][0]=1-(len(self.q_table)-1-i+len(self.q_table)-1-j+1)*.1/len(self.q_table)**2
-                       #South
-                    if j==len(self.q_table)-1:
-                            self.q_table[i][j][0][1]=-1  #Wall
-                            self.q_table[i][j][1][1]=1 #Visited
-                    else:
-                            self.q_table[i][j][0][1]=1-(len(self.q_table)-1-i+len(self.q_table)-1-j-1)*.1/len(self.q_table)**2
-                    #East
-                    if i==len(self.q_table)-1:
-                            self.q_table[i][j][0][2]=-1  #Wall
-                            self.q_table[i][j][1][2]=1 #Visited
-                    else:
-                            self.q_table[i][j][0][2]=1-(len(self.q_table)-1-i+len(self.q_table)-1-j-1)*.1/len(self.q_table)**2
-                    #West
-                    if i==0:
-                            self.q_table[i][j][0][3]=-1  #Wall
-                            self.q_table[i][j][1][3]=1 #Visited
-                    else:
-                            self.q_table[i][j][0][3]=1-(len(self.q_table)-1-i+len(self.q_table)-1-j+1)*.1/len(self.q_table)**2
+            for j in range(len(self.q_table[i])):  #Rows
+                #North
+                if j==0:
+                        self.q_table[i][j][0][0]=-1  #Wall
+                        self.q_table[i][j][1][0]=1 #Visited
+                else:
+                        self.q_table[i][j][0][0]=1-(len(self.q_table)-1-i+len(self.q_table)-1-j+1)*.1/len(self.q_table)**2
+                #South
+                if j==len(self.q_table)-1:
+                        self.q_table[i][j][0][1]=-1  #Wall
+                        self.q_table[i][j][1][1]=1 #Visited
+                else:
+                        self.q_table[i][j][0][1]=1-(len(self.q_table)-1-i+len(self.q_table)-1-j-1)*.1/len(self.q_table)**2
+                #East
+                if i==len(self.q_table)-1:
+                        self.q_table[i][j][0][2]=-1  #Wall
+                        self.q_table[i][j][1][2]=1 #Visited
+                else:
+                        self.q_table[i][j][0][2]=1-(len(self.q_table)-1-i+len(self.q_table)-1-j-1)*.1/len(self.q_table)**2
+                #West
+                if i==0:
+                        self.q_table[i][j][0][3]=-1  #Wall
+                        self.q_table[i][j][1][3]=1 #Visited
+                else:
+                        self.q_table[i][j][0][3]=1-(len(self.q_table)-1-i+len(self.q_table)-1-j+1)*.1/len(self.q_table)**2
+        
+        self.q_table[len(self.q_table)-1][len(self.q_table)-1][0][0]=0 #No rewards for leaving the goal
+        self.q_table[len(self.q_table)-1][len(self.q_table)-1][0][3]=0 #No rewards for leaving the goal
 
         # A variable for keeping the minimum exploration rate and learning rate
         self.MIN_EXPLORE_RATE = 0.001
@@ -161,13 +164,13 @@ class Xavilan(BaseAgent):
         if randx < self.explore_rate:
             
             action = int(np.random.uniform(0,4))
-            if self.q_table[self.state_0+(1,action)]==1: #if already visited move to next action
+            if self.q_table[self.state_0+(1,action)]>=1: #if already visited move to next action
              action=(action+1)%4  #stay within 0 to 3
-             if self.q_table[self.state_0+(1,action)]==1:
+             if self.q_table[self.state_0+(1,action)]>=1:
                     action=(action+1)%4
-                    if self.q_table[self.state_0+(1,action)]==1:
+                    if self.q_table[self.state_0+(1,action)]>=1:
                         action=(action+1)%4
-                        if self.q_table[self.state_0+(1,action)]==1:
+                        if self.q_table[self.state_0+(1,action)]>=1:
                             action = int(np.argmax(self.q_table[self.state_0][0]))
 #                            action=(action+1)%4 #back to original choice
 #                            if self.q_table[self.state_0+(0,action)]==-1: #if a wall move to next action
@@ -193,6 +196,9 @@ class Xavilan(BaseAgent):
         # Convert state observation received from environment to the internal data structure.
         state = self.state_to_bucket(obv)
         self.total_reward += reward
+        
+        if self.total_reward<-.1/len(self.q_table)**2*2000:
+            test=1
 
         # Update the Q-Table based on the result. 
         # Actually, it just updates a Q(the previous state + decided action)
@@ -203,35 +209,51 @@ class Xavilan(BaseAgent):
         # best_q also returns the q value of the best possible action in the new state.
         
         if action==0: #North
-                oppAction=1
-                oppState=(self.state_0[0],self.state_0[1]-1)
+            oppAction=1
+            oppState=(self.state_0[0],self.state_0[1]-1)
         if action==1: #South
-                oppAction=0
-                oppState=(self.state_0[0],self.state_0[1]+1)
+            oppAction=0
+            oppState=(self.state_0[0],self.state_0[1]+1)
         if action==2: #East
-                oppAction=3
-                oppState=(self.state_0[0]+1,self.state_0[1])
+            oppAction=3
+            oppState=(self.state_0[0]+1,self.state_0[1])
         if action==3: #West
-                oppAction=2
-                oppState=(self.state_0[0]-1,self.state_0[1])
+            oppAction=2
+            oppState=(self.state_0[0]-1,self.state_0[1])
 
         if state==self.state_0: #Hit a wall
-                self.q_table[self.state_0 + (0,action)]=-1 #It's a wall.
-                self.q_table[self.state_0 + (1,action)]=1 #Visited
-                self.q_table[oppState + (0,oppAction)]=-1 #It's a wall.
-                self.q_table[oppState + (1,oppAction)]=1 #Visited
+            self.q_table[self.state_0 + (0,action)]=-1 #It's a wall.
+            self.q_table[self.state_0 + (1,action)]+=1 #Visited
+            self.q_table[oppState + (0,oppAction)]=-1 #It's a wall.
+            self.q_table[oppState + (1,oppAction)]+=1 #Visited
         else:  #Didn't hit a wall
-                best_q = np.amax(self.q_table[state][0])
-                self.q_table[self.state_0 + (0,action)] += self.learning_rate * (reward + self.discount_factor * (best_q) - self.q_table[self.state_0 + (0,action)])
-                self.q_table[self.state_0 + (1,action)]=1 #Visited
-                oppBest_q = np.amax(self.q_table[self.state_0][0])
-                self.q_table[oppState + (0,oppAction)] += self.learning_rate * (reward + self.discount_factor * (oppBest_q) - self.q_table[oppState + (0,oppAction)])
-                self.q_table[oppState + (1,oppAction)]=1 #Visited
+            best_q = np.amax(self.q_table[state][0])
+            self.q_table[self.state_0 + (0,action)] += self.learning_rate * (reward + self.discount_factor * (best_q) - self.q_table[self.state_0 + (0,action)])
+            self.q_table[self.state_0 + (1,action)]+=1 #Visited
+            oppBest_q = np.amax(self.q_table[self.state_0][0])
+            if oppBest_q>1:
+                test=1
+            if state==(len(self.q_table)-1,len(self.q_table)-1): #if goal
+                self.q_table[state + (0,oppAction)]=0 #Do nothing
+            elif state==oppState: #not a portal
+                self.q_table[state + (0,oppAction)] += self.learning_rate * (reward + self.discount_factor * (oppBest_q) - self.q_table[state + (0,oppAction)])
+                self.q_table[state + (1,oppAction)]+=1 #Visited
+            else:  #a portal
+                if state[1]!=0: #North of portal exit, not on northern edge
+                    self.q_table[state[0]+0,state[1]-1,0,1] += self.learning_rate * (reward + self.discount_factor * (oppBest_q) - self.q_table[state[0]+0,state[1]-1,0,1])
+                if state[1]!=len(self.q_table)-1 and state!=(len(self.q_table)-1,len(self.q_table)-2):  #South of portal exit, not on southern edge and not north of exit
+                    self.q_table[state[0]+0,state[1]+1,0,0] += self.learning_rate * (reward + self.discount_factor * (oppBest_q) - self.q_table[state[0]+0,state[1]+1,0,0])
+                if state[0]!=len(self.q_table)-1 and state!=(len(self.q_table)-2,len(self.q_table)-1):  #East of portal exit, not on eastern edge and not west of exit
+                    self.q_table[state[0]+1,state[1]+0,0,3] += self.learning_rate * (reward + self.discount_factor * (oppBest_q) - self.q_table[state[0]+1,state[1]+0,0,3])
+                if state[0]!=0:  #West of portal exit, not on western edge
+                    self.q_table[state[0]-1,state[1]+0,0,2] += self.learning_rate * (reward + self.discount_factor * (oppBest_q) - self.q_table[state[0]-1,state[1]+0,0,2])
 
         # Setting up for the next iteration and update the current state
         self.state_0 = self.state_to_bucket(obv)
         self.done = done
-    
+        if self.tries==100 and self.state_0==(len(self.q_table)-1,len(self.q_table)-1):
+            test=1
+
     # Give control to stop the episodes if the agent needs!
     def need_to_stop_episode(self):
         return False
@@ -267,3 +289,5 @@ class Xavilan(BaseAgent):
 #04/12/2019 12:31pm: Fixed initial q bug. Fixed random wall avoidance.
 #04/12/2019 01:21pm: Update the q of the attempted state and opposite action.
 #04/12/2019 02:33pm: Remembers where it's been.
+#04/12/2019 04:12pm: Update the q of oppostion action for portals.
+#04/12/2019 08:37pm: Zeroed rewards for leaving goal.
