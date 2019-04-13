@@ -48,7 +48,6 @@ class Xavilan(BaseAgent):
         
         # Maze Length
         self.mazeLength=self.observation_space_high[0]+1
-        
         #Initialize the q_table as if there were no walls or teleporters
         for i in range(len(self.q_table)):  #Columns
             for j in range(len(self.q_table[i])):  #Rows
@@ -250,8 +249,11 @@ class Xavilan(BaseAgent):
             oppState=(self.state_0[0]-1,self.state_0[1])
 
         self.q_table[self.state_0 + (1,action)]+=1 # add a visit
-        self.q_table[self.state_0 + (2,action)]=state[0] # update action column
-        self.q_table[self.state_0 + (3,action)]=state[1] # update action row
+        update_q=0 # initialize update_q indicator
+        if (self.q_table[self.state_0][2][action],self.q_table[self.state_0][3][action])!=state: # unexpected action state
+            self.q_table[self.state_0 + (2,action)]=state[0] # update action column
+            self.q_table[self.state_0 + (3,action)]=state[1] # update action row
+            update_q=1
 
         if state==self.state_0: #Hit a wall
             self.q_table[self.state_0 + (0,action)]=-1 # set forward action as wall
@@ -287,6 +289,9 @@ class Xavilan(BaseAgent):
                         self.q_table[state[0]-1,state[1]+0,2,2] = oppState[0] # set column to portal entrance column
                         self.q_table[state[0]-1,state[1]+0,3,2] = oppState[1] # set row to portal entrance row
 
+        if update_q==1:
+            self.q_table_update()
+
         # Setting up for the next iteration and update the current state
         self.state_0 = (obv[0],obv[1])
         self.done = done
@@ -318,6 +323,31 @@ class Xavilan(BaseAgent):
     # Generate a learning rate dependent on the steps of an episode by using a logarithmic equation
     def get_learning_rate(self, t):
         return max(self.MIN_LEARNING_RATE, min(0.8, 1.0 - math.log10((t+1)/self.DECAY_FACTOR)))
+
+    # update the q_table if any walls or portals are discovered
+    def q_table_update(self):
+        scan=0
+        while True:
+            scan+=1
+            updates=0
+            for i in range(len(self.q_table)):  #Columns
+                for j in range(len(self.q_table[i])):  #Rows
+                    for k in range(self.space_action_n): #Actions
+                        state=(int(self.q_table[i,j,2,k]),int(self.q_table[i,j,3,k]))
+                        if self.q_table[i,j,0,k]>0: # if not a wall and not in goalState
+                            best_q=np.amax(self.q_table[state][0])
+                            if state==self.goalState:
+                                reward=1
+                            else:
+                                reward=-.1/self.mazeLength**2
+                            update_q=reward+best_q
+                            if update_q!=self.q_table[i,j,0,k]:
+                                self.q_table[i,j,0,k]=update_q
+                                updates+=1
+            if updates==0: # Redo the update until there are no more updates
+                break
+            if scan>500:
+                test=1 # debug too many scans of the q_table
 
 #04/11/2019 04:14pm: Changed learning rate to 1.0 because the maze is deterministic
 #04/11/2019 06:41pm: No discount factor. Step punishment and final reward all the same.
