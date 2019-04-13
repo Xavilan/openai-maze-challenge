@@ -48,6 +48,10 @@ class Xavilan(BaseAgent):
         
         # Maze Length
         self.mazeLength=self.observation_space_high[0]+1
+        
+        #Punish
+        self.punish=.1/self.mazeLength**2
+        
         #Initialize the q_table as if there were no walls or teleporters
         for i in range(len(self.q_table)):  #Columns
             for j in range(len(self.q_table[i])):  #Rows
@@ -58,7 +62,7 @@ class Xavilan(BaseAgent):
                     self.q_table[i,j,2,0]=i   # same column
                     self.q_table[i,j,3,0]=j   # same row
                 else:
-                    self.q_table[i,j,0,0]=1-(self.mazeLength-1-i+self.mazeLength-1-j+1)*.1/self.mazeLength**2 # linear away from goal
+                    self.q_table[i,j,0,0]=1-(self.mazeLength-1-i+self.mazeLength-1-j+1)*self.punish # linear away from goal
                     self.q_table[i,j,1,0]=0   # unvisited
                     self.q_table[i,j,2,0]=i   # same column
                     self.q_table[i,j,3,0]=j-1 # row to the north
@@ -69,7 +73,7 @@ class Xavilan(BaseAgent):
                     self.q_table[i,j,2,1]=i   # same column
                     self.q_table[i,j,3,1]=j   # same row
                 else:
-                    self.q_table[i,j,0,1]=1-(self.mazeLength-1-i+self.mazeLength-1-j-1)*.1/self.mazeLength**2 # linear away from goal
+                    self.q_table[i,j,0,1]=1-(self.mazeLength-1-i+self.mazeLength-1-j-1)*self.punish # linear away from goal
                     self.q_table[i,j,1,1]=0   # unvisited
                     self.q_table[i,j,2,1]=i   # same column
                     self.q_table[i,j,3,1]=j+1 # row to the south
@@ -80,7 +84,7 @@ class Xavilan(BaseAgent):
                     self.q_table[i,j,2,2]=i   # same column
                     self.q_table[i,j,3,2]=j   # same row
                 else:
-                    self.q_table[i,j,0,2]=1-(self.mazeLength-1-i+self.mazeLength-1-j-1)*.1/self.mazeLength**2 # linear away from goal
+                    self.q_table[i,j,0,2]=1-(self.mazeLength-1-i+self.mazeLength-1-j-1)*self.punish # linear away from goal
                     self.q_table[i,j,1,2]=0   # unvisited
                     self.q_table[i,j,2,2]=i+1 # column to the east
                     self.q_table[i,j,3,2]=j   # same row
@@ -91,7 +95,7 @@ class Xavilan(BaseAgent):
                     self.q_table[i,j,2,3]=i   # same column
                     self.q_table[i,j,3,3]=j   # same row
                 else:
-                    self.q_table[i,j,0,3]=1-(self.mazeLength-1-i+self.mazeLength-1-j+1)*.1/self.mazeLength**2
+                    self.q_table[i,j,0,3]=1-(self.mazeLength-1-i+self.mazeLength-1-j+1)*self.punish
                     self.q_table[i,j,1,3]=0   # unvisited
                     self.q_table[i,j,2,3]=i-1 # column to the west
                     self.q_table[i,j,3,3]=j   # same row
@@ -188,35 +192,11 @@ class Xavilan(BaseAgent):
     # Request the agent to decide about the action
     # It's called by the simulator
     def select_action(self):
-        # Select a random action
-        randx=random.random()
-        if randx < self.explore_rate:
-            
-            action = int(np.random.uniform(0,4))
-            if self.q_table[self.state_0+(1,action)]>=1: #if already visited move to next action
-             action=(action+1)%4  #stay within 0 to 3
-             if self.q_table[self.state_0+(1,action)]>=1:
-                    action=(action+1)%4
-                    if self.q_table[self.state_0+(1,action)]>=1:
-                        action=(action+1)%4
-                        if self.q_table[self.state_0+(1,action)]>=1:
-                            action = int(np.argmax(self.q_table[self.state_0][0]))
-#                            action=(action+1)%4 #back to original choice
-#                            if self.q_table[self.state_0+(0,action)]==-1: #if a wall move to next action
-#                                action=(action+1)%4  #stay within 0 to 3
-#                                if self.q_table[self.state_0+(0,action)]==-1:
-#                                    action=(action+1)%4
-#                                    if self.q_table[self.state_0+(0,action)]==-1:
-#                                        action=(action+1)%4
-#                                        if self.q_table[self.state_0+(0,action)]==-1:
-#                                            action=(action+1)%4 #back to original choice
-#                                            if self.q_table[self.state_0+(0,action)]==-1:
-#                                                action=(action+1)%4 #back to original choice
-                                    
-        # Select the action with the highest q from Q-table
-        else:
-            action = int(np.argmax(self.q_table[self.state_0][0]))
-
+        
+        # q values + 10 for unexplored action + random for tie breaking
+        action=int(np.argmax(self.q_table[self.state_0][0]+\
+                         (self.q_table[self.state_0][1]==0)*10+\
+                         self.punish/2*np.random.rand(self.space_action_n)))
         return action
 
     # It's called by the simulator and share the 
@@ -339,7 +319,7 @@ class Xavilan(BaseAgent):
                             if state==self.goalState:
                                 reward=1
                             else:
-                                reward=-.1/self.mazeLength**2
+                                reward=-self.punish
                             update_q=reward+best_q
                             if update_q!=self.q_table[i,j,0,k]:
                                 self.q_table[i,j,0,k]=update_q
@@ -365,3 +345,5 @@ class Xavilan(BaseAgent):
 #04/13/2019 12:45pm: Added update of action and oppAction state coordinates
                     #Fixed bug of updating reward of portal exit if a wall was already known.
                     #Fixed bug not updating visits to portals.
+#04/13/2019 03:47pm: Added random number to q value when selecting as a tie breaker.
+#04/13/2019 04:21pm: action is now q values + 10 for unexplored action + random for tie breaking
