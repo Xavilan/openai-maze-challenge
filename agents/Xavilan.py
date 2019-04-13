@@ -163,7 +163,6 @@ class Xavilan(BaseAgent):
             bucket_indice.append(bucket_index)
         return tuple(bucket_indice)
 
-
     # Get the agent information
     # It's required to be updated by every team.
     def get_info(self):
@@ -225,7 +224,8 @@ class Xavilan(BaseAgent):
     # information after applying the action by simulator on the environment.
     def observe(self, obv, reward, done, action):
         # Convert state observation received from environment to the internal data structure.
-        state = self.state_to_bucket(obv)
+        state = (obv[0],obv[1])
+
         self.total_reward += reward
         
         if self.total_reward<-.1/self.mazeLength**2*2000:
@@ -249,35 +249,46 @@ class Xavilan(BaseAgent):
         if action==3: #West
             oppState=(self.state_0[0]-1,self.state_0[1])
 
+        self.q_table[self.state_0 + (1,action)]+=1 # add a visit
+        self.q_table[self.state_0 + (2,action)]=state[0] # update action column
+        self.q_table[self.state_0 + (3,action)]=state[1] # update action row
+
         if state==self.state_0: #Hit a wall
-            self.q_table[self.state_0 + (0,action)]=-1 #It's a wall.
-            self.q_table[self.state_0 + (1,action)]+=1 #Visited
-            self.q_table[oppState + (0,oppAction)]=-1 #It's a wall.
-            self.q_table[oppState + (1,oppAction)]+=1 #Visited
+            self.q_table[self.state_0 + (0,action)]=-1 # set forward action as wall
+            self.q_table[oppState + (0,oppAction)]=-1 # set oppAction as wall
+            self.q_table[oppState + (1,oppAction)]+=1 # add a visit to oppAction
+            self.q_table[oppState + (2,oppAction)]=oppState[0] # set oppAction column to same column
+            self.q_table[oppState + (3,oppAction)]=oppState[1] # set oppAction row to same row
         else:  #Didn't hit a wall
             best_q = np.amax(self.q_table[state][0])
             self.q_table[self.state_0 + (0,action)] += self.learning_rate * (reward + self.discount_factor * (best_q) - self.q_table[self.state_0 + (0,action)])
-            self.q_table[self.state_0 + (1,action)]+=1 #Visited
             oppBest_q = np.amax(self.q_table[self.state_0][0])
             if oppBest_q>1:
                 test=1 # debug for bad oppBest values
-            if state==self.goalState: #if goal
-                self.q_table[state + (0,oppAction)]=0 #Do nothing
-            elif state==oppState: #not a portal
-                self.q_table[state + (0,oppAction)] += self.learning_rate * (reward + self.discount_factor * (oppBest_q) - self.q_table[state + (0,oppAction)])
-                self.q_table[state + (1,oppAction)]+=1 #Visited
-            else:  #a portal
-                if state[1]!=0: #North of portal exit, not on northern edge
-                    self.q_table[state[0]+0,state[1]-1,0,1] += self.learning_rate * (reward + self.discount_factor * (oppBest_q) - self.q_table[state[0]+0,state[1]-1,0,1])
-                if state[1]!=self.mazeLength-1 and state!=(self.goalState[0],self.goalState[1]-1):  #South of portal exit, not on southern edge and not north of exit
-                    self.q_table[state[0]+0,state[1]+1,0,0] += self.learning_rate * (reward + self.discount_factor * (oppBest_q) - self.q_table[state[0]+0,state[1]+1,0,0])
-                if state[0]!=self.mazeLength-1 and state!=(self.goalState[0]-1,self.goalState[1]):  #East of portal exit, not on eastern edge and not west of exit
-                    self.q_table[state[0]+1,state[1]+0,0,3] += self.learning_rate * (reward + self.discount_factor * (oppBest_q) - self.q_table[state[0]+1,state[1]+0,0,3])
-                if state[0]!=0:  #West of portal exit, not on western edge
-                    self.q_table[state[0]-1,state[1]+0,0,2] += self.learning_rate * (reward + self.discount_factor * (oppBest_q) - self.q_table[state[0]-1,state[1]+0,0,2])
+            if state!=self.goalState: # if not goalState
+                if state==oppState: # if not a portal
+                    self.q_table[state + (0,oppAction)] += self.learning_rate * (reward + self.discount_factor * (oppBest_q) - self.q_table[state + (0,oppAction)])
+                    self.q_table[state + (1,oppAction)]+=1 # add a visit to oppAction
+                else:  #a portal
+                    if state[1]!=0 and self.q_table[state[0]+0,state[1]-1,0,1]>0: # north of portal exit, not on northern edge, not a wall, not in goalState
+                        self.q_table[state[0]+0,state[1]-1,0,1] += self.learning_rate * (reward + self.discount_factor * (oppBest_q) - self.q_table[state[0]+0,state[1]-1,0,1])
+                        self.q_table[state[0]+0,state[1]-1,2,1] = oppState[0] # set column to portal entrance column
+                        self.q_table[state[0]+0,state[1]-1,3,1] = oppState[1] # set row to portal entrance row
+                    if state[1]!=self.mazeLength-1 and self.q_table[state[0]+0,state[1]+1,0,0]>0: # south of portal exit, not on southern edge, not a wall, not in goalState
+                        self.q_table[state[0]+0,state[1]+1,0,0] += self.learning_rate * (reward + self.discount_factor * (oppBest_q) - self.q_table[state[0]+0,state[1]+1,0,0])
+                        self.q_table[state[0]+0,state[1]+1,2,0] = oppState[0] # set column to portal entrance column
+                        self.q_table[state[0]+0,state[1]+1,3,0] = oppState[1] # set row to portal entrance row
+                    if state[0]!=self.mazeLength-1 and self.q_table[state[0]+1,state[1]+0,0,3]>0: # east of portal exit, not on eastern edge, not a wall, not in goalState
+                        self.q_table[state[0]+1,state[1]+0,0,3] += self.learning_rate * (reward + self.discount_factor * (oppBest_q) - self.q_table[state[0]+1,state[1]+0,0,3])
+                        self.q_table[state[0]+1,state[1]+0,2,3] = oppState[0] # set column to portal entrance column
+                        self.q_table[state[0]+1,state[1]+0,3,3] = oppState[1] # set row to portal entrance row
+                    if state[0]!=0 and self.q_table[state[0]-1,state[1]+0,0,2]>0: # west of portal exit, not on western edge, not a wall, not in goalState
+                        self.q_table[state[0]-1,state[1]+0,0,2] += self.learning_rate * (reward + self.discount_factor * (oppBest_q) - self.q_table[state[0]-1,state[1]+0,0,2])
+                        self.q_table[state[0]-1,state[1]+0,2,2] = oppState[0] # set column to portal entrance column
+                        self.q_table[state[0]-1,state[1]+0,3,2] = oppState[1] # set row to portal entrance row
 
         # Setting up for the next iteration and update the current state
-        self.state_0 = self.state_to_bucket(obv)
+        self.state_0 = (obv[0],obv[1])
         self.done = done
         if self.tries==100 and self.state_0==(len(self.q_table)-1,len(self.q_table)-1):
             test=1 # debug for examine end of run
@@ -321,3 +332,6 @@ class Xavilan(BaseAgent):
 #04/12/2019 08:37pm: Zeroed rewards for leaving goal.
 #04/13/2019 09:04am: Added goalState tuple.
 #04/13/2019 11:31am: Added action state coordinates to q_table
+#04/13/2019 12:45pm: Added update of action and oppAction state coordinates
+                    #Fixed bug of updating reward of portal exit if a wall was already known.
+                    #Fixed bug not updating visits to portals.
