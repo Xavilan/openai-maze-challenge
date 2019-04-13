@@ -41,38 +41,67 @@ class Xavilan(BaseAgent):
         # Create q-table which is used in the Q-Learning algorithm.
         # It builds a multi-dimensional array derived from maze dimension + possible actions.
         # For this example, it establishes a 3-dimensional array with this size [10, 10, 4].
-        self.q_table = np.zeros(self.maze_size + (2,self.space_action_n), dtype=float) #[][][][0] is reward, [][][][1] is visit indicator
+        self.q_table = np.zeros(self.maze_size + (4,self.space_action_n), dtype=float) # StateCol, StateRow, ActionRewards, ActionVisits, ActionCol, ActionRow
+
+        # Goal state
+        self.goalState=tuple(self.observation_space_high)
+        
+        # Maze Length
+        self.mazeLength=self.observation_space_high[0]+1
         
         #Initialize the q_table as if there were no walls or teleporters
         for i in range(len(self.q_table)):  #Columns
             for j in range(len(self.q_table[i])):  #Rows
-                #North
+                # north
                 if j==0:
-                        self.q_table[i][j][0][0]=-1  #Wall
-                        self.q_table[i][j][1][0]=1 #Visited
+                    self.q_table[i,j,0,0]=-1  # wall
+                    self.q_table[i,j,1,0]=1   # visited
+                    self.q_table[i,j,2,0]=i   # same column
+                    self.q_table[i,j,3,0]=j   # same row
                 else:
-                        self.q_table[i][j][0][0]=1-(len(self.q_table)-1-i+len(self.q_table)-1-j+1)*.1/len(self.q_table)**2
-                #South
-                if j==len(self.q_table)-1:
-                        self.q_table[i][j][0][1]=-1  #Wall
-                        self.q_table[i][j][1][1]=1 #Visited
+                    self.q_table[i,j,0,0]=1-(self.mazeLength-1-i+self.mazeLength-1-j+1)*.1/self.mazeLength**2 # linear away from goal
+                    self.q_table[i,j,1,0]=0   # unvisited
+                    self.q_table[i,j,2,0]=i   # same column
+                    self.q_table[i,j,3,0]=j-1 # row to the north
+                # south
+                if j==self.mazeLength-1:
+                    self.q_table[i,j,0,1]=-1  # wall
+                    self.q_table[i,j,1,1]=1   # visited
+                    self.q_table[i,j,2,1]=i   # same column
+                    self.q_table[i,j,3,1]=j   # same row
                 else:
-                        self.q_table[i][j][0][1]=1-(len(self.q_table)-1-i+len(self.q_table)-1-j-1)*.1/len(self.q_table)**2
-                #East
-                if i==len(self.q_table)-1:
-                        self.q_table[i][j][0][2]=-1  #Wall
-                        self.q_table[i][j][1][2]=1 #Visited
+                    self.q_table[i,j,0,1]=1-(self.mazeLength-1-i+self.mazeLength-1-j-1)*.1/self.mazeLength**2 # linear away from goal
+                    self.q_table[i,j,1,1]=0   # unvisited
+                    self.q_table[i,j,2,1]=i   # same column
+                    self.q_table[i,j,3,1]=j+1 # row to the south
+                # east
+                if i==self.mazeLength-1:
+                    self.q_table[i,j,0,2]=-1  # wall
+                    self.q_table[i,j,1,2]=1   # visited
+                    self.q_table[i,j,2,2]=i   # same column
+                    self.q_table[i,j,3,2]=j   # same row
                 else:
-                        self.q_table[i][j][0][2]=1-(len(self.q_table)-1-i+len(self.q_table)-1-j-1)*.1/len(self.q_table)**2
-                #West
+                    self.q_table[i,j,0,2]=1-(self.mazeLength-1-i+self.mazeLength-1-j-1)*.1/self.mazeLength**2 # linear away from goal
+                    self.q_table[i,j,1,2]=0   # unvisited
+                    self.q_table[i,j,2,2]=i+1 # column to the east
+                    self.q_table[i,j,3,2]=j   # same row
+                # west
                 if i==0:
-                        self.q_table[i][j][0][3]=-1  #Wall
-                        self.q_table[i][j][1][3]=1 #Visited
+                    self.q_table[i,j,0,3]=-1  # wall
+                    self.q_table[i,j,1,3]=1   # visited
+                    self.q_table[i,j,2,3]=i   # same column
+                    self.q_table[i,j,3,3]=j   # same row
                 else:
-                        self.q_table[i][j][0][3]=1-(len(self.q_table)-1-i+len(self.q_table)-1-j+1)*.1/len(self.q_table)**2
+                    self.q_table[i,j,0,3]=1-(self.mazeLength-1-i+self.mazeLength-1-j+1)*.1/self.mazeLength**2
+                    self.q_table[i,j,1,3]=0   # unvisited
+                    self.q_table[i,j,2,3]=i-1 # column to the west
+                    self.q_table[i,j,3,3]=j   # same row
         
-        self.q_table[len(self.q_table)-1][len(self.q_table)-1][0][0]=0 #No rewards for leaving the goal
-        self.q_table[len(self.q_table)-1][len(self.q_table)-1][0][3]=0 #No rewards for leaving the goal
+        # initialize goalState action 
+        self.q_table[self.goalState+(0,)][:]=0 # No rewards for leaving the goal
+        self.q_table[self.goalState+(1,)][:]=0 # unvisited
+        self.q_table[self.goalState+(2,)][:]=self.goalState[0] # same column
+        self.q_table[self.goalState+(3,)][:]=self.goalState[1] # same row
 
         # A variable for keeping the minimum exploration rate and learning rate
         self.MIN_EXPLORE_RATE = 0.001
@@ -110,7 +139,9 @@ class Xavilan(BaseAgent):
         self.state_0 = None
         self.SOLVED_T = np.prod(self.maze_size, dtype=int)
         self.STREAK_TO_END = 100
-
+        
+        # action inverse
+        self.invAction=(1,0,3,2)
 
     # It's the function to map the observed state received from the environment
     # to bucket as the internal dataset keeping the state info. For this example,
@@ -197,7 +228,7 @@ class Xavilan(BaseAgent):
         state = self.state_to_bucket(obv)
         self.total_reward += reward
         
-        if self.total_reward<-.1/len(self.q_table)**2*2000:
+        if self.total_reward<-.1/self.mazeLength**2*2000:
             test=1
 
         # Update the Q-Table based on the result. 
@@ -208,17 +239,14 @@ class Xavilan(BaseAgent):
         #                                          Don't forget that the action is the last dimension of the q-table
         # best_q also returns the q value of the best possible action in the new state.
         
+        oppAction=self.invAction[action]
         if action==0: #North
-            oppAction=1
             oppState=(self.state_0[0],self.state_0[1]-1)
         if action==1: #South
-            oppAction=0
             oppState=(self.state_0[0],self.state_0[1]+1)
         if action==2: #East
-            oppAction=3
             oppState=(self.state_0[0]+1,self.state_0[1])
         if action==3: #West
-            oppAction=2
             oppState=(self.state_0[0]-1,self.state_0[1])
 
         if state==self.state_0: #Hit a wall
@@ -232,8 +260,8 @@ class Xavilan(BaseAgent):
             self.q_table[self.state_0 + (1,action)]+=1 #Visited
             oppBest_q = np.amax(self.q_table[self.state_0][0])
             if oppBest_q>1:
-                test=1
-            if state==(len(self.q_table)-1,len(self.q_table)-1): #if goal
+                test=1 # debug for bad oppBest values
+            if state==self.goalState: #if goal
                 self.q_table[state + (0,oppAction)]=0 #Do nothing
             elif state==oppState: #not a portal
                 self.q_table[state + (0,oppAction)] += self.learning_rate * (reward + self.discount_factor * (oppBest_q) - self.q_table[state + (0,oppAction)])
@@ -241,9 +269,9 @@ class Xavilan(BaseAgent):
             else:  #a portal
                 if state[1]!=0: #North of portal exit, not on northern edge
                     self.q_table[state[0]+0,state[1]-1,0,1] += self.learning_rate * (reward + self.discount_factor * (oppBest_q) - self.q_table[state[0]+0,state[1]-1,0,1])
-                if state[1]!=len(self.q_table)-1 and state!=(len(self.q_table)-1,len(self.q_table)-2):  #South of portal exit, not on southern edge and not north of exit
+                if state[1]!=self.mazeLength-1 and state!=(self.goalState[0],self.goalState[1]-1):  #South of portal exit, not on southern edge and not north of exit
                     self.q_table[state[0]+0,state[1]+1,0,0] += self.learning_rate * (reward + self.discount_factor * (oppBest_q) - self.q_table[state[0]+0,state[1]+1,0,0])
-                if state[0]!=len(self.q_table)-1 and state!=(len(self.q_table)-2,len(self.q_table)-1):  #East of portal exit, not on eastern edge and not west of exit
+                if state[0]!=self.mazeLength-1 and state!=(self.goalState[0]-1,self.goalState[1]):  #East of portal exit, not on eastern edge and not west of exit
                     self.q_table[state[0]+1,state[1]+0,0,3] += self.learning_rate * (reward + self.discount_factor * (oppBest_q) - self.q_table[state[0]+1,state[1]+0,0,3])
                 if state[0]!=0:  #West of portal exit, not on western edge
                     self.q_table[state[0]-1,state[1]+0,0,2] += self.learning_rate * (reward + self.discount_factor * (oppBest_q) - self.q_table[state[0]-1,state[1]+0,0,2])
@@ -252,7 +280,7 @@ class Xavilan(BaseAgent):
         self.state_0 = self.state_to_bucket(obv)
         self.done = done
         if self.tries==100 and self.state_0==(len(self.q_table)-1,len(self.q_table)-1):
-            test=1
+            test=1 # debug for examine end of run
 
     # Give control to stop the episodes if the agent needs!
     def need_to_stop_episode(self):
@@ -291,3 +319,5 @@ class Xavilan(BaseAgent):
 #04/12/2019 02:33pm: Remembers where it's been.
 #04/12/2019 04:12pm: Update the q of oppostion action for portals.
 #04/12/2019 08:37pm: Zeroed rewards for leaving goal.
+#04/13/2019 09:04am: Added goalState tuple.
+#04/13/2019 11:31am: Added action state coordinates to q_table
