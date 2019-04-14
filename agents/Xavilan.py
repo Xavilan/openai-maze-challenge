@@ -301,8 +301,8 @@ class Xavilan(BaseAgent):
         while True:
             scan+=1
             updates=0
-            for i in range(len(self.q_table)):  #Columns
-                for j in range(len(self.q_table[i])):  #Rows
+            for i in reversed(range(len(self.q_table))):  #Columns
+                for j in reversed(range(len(self.q_table[i]))):  #Rows
                     for k in range(self.space_action_n): #Actions
                         state=(int(self.q_table[i,j,2,k]),int(self.q_table[i,j,3,k]))
                         if self.q_table[i,j,0,k]>0: # if not a wall and not in goalState
@@ -340,3 +340,4 @@ class Xavilan(BaseAgent):
 #04/13/2019 04:21pm: Action is now q values + 10 for unexplored action + random for tie breaking
 #04/14/2019 02:11pm: Added update of action coordinates into a new portal entrance.
                     #Moved all updates of q into q_table_update method.
+#04/14/2019 03:00pm: Reversed the scan order of the q_table_update as updates tend to propagate up and left.
