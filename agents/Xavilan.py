@@ -203,7 +203,7 @@ class Xavilan(BaseAgent):
     # information after applying the action by simulator on the environment.
     def observe(self, obv, reward, done, action):
         # Convert state observation received from environment to the internal data structure.
-        state = (obv[0],obv[1])
+        actState = (obv[0],obv[1])
 
         self.total_reward += reward
         
@@ -218,58 +218,49 @@ class Xavilan(BaseAgent):
         #                                          Don't forget that the action is the last dimension of the q-table
         # best_q also returns the q value of the best possible action in the new state.
         
-        oppAction=self.invAction[action]
-        if action==0: #North
-            oppState=(self.state_0[0],self.state_0[1]-1)
-        if action==1: #South
-            oppState=(self.state_0[0],self.state_0[1]+1)
-        if action==2: #East
-            oppState=(self.state_0[0]+1,self.state_0[1])
-        if action==3: #West
-            oppState=(self.state_0[0]-1,self.state_0[1])
+        expState=(int(self.q_table[self.state_0][2][action]),int(self.q_table[self.state_0][3][action])) # expected state after action out of state_0
+        oppAction=self.invAction[action]  #N->S, S->N, E->W, W->E
 
         self.q_table[self.state_0 + (1,action)]+=1 # add a visit
-        update_q=0 # initialize update_q indicator
-        if (self.q_table[self.state_0][2][action],self.q_table[self.state_0][3][action])!=state: # unexpected action state
-            self.q_table[self.state_0 + (2,action)]=state[0] # update action column
-            self.q_table[self.state_0 + (3,action)]=state[1] # update action row
-            update_q=1
+        if actState==expState: # if actual state is the expected state
+            self.q_table[actState + (1,oppAction)]+=1 # add a visit to oppAction of actual state
+        else:
+            if actState==self.state_0: # found a wall
+                self.q_table[self.state_0 + (0,action)]=-1 # set forward action as wall
+                self.q_table[self.state_0 + (2,action)]=actState[0] # update expected column of state_0
+                self.q_table[self.state_0 + (3,action)]=actState[1] # update expected row of state_0
+                self.q_table[expState + (0,oppAction)]=-1 # set oppAction of expState as wall
+                self.q_table[expState + (1,oppAction)]+=1 # add a visit to oppAction of expState
+                self.q_table[expState + (2,oppAction)]=expState[0] # set expected column of oppAction of expState to same column
+                self.q_table[expState + (3,oppAction)]=expState[1] # set expected row of oppAction of expState to same row
+            else: # found a portal
+                # Update cells surrounding new portal entrance
+                if expState[1]!=0 and self.q_table[expState[0]+0,expState[1]-1,0,1]>0: # north of portal exit, not on northern edge, not a wall, not in goalState
+                    self.q_table[expState[0]+0,expState[1]-1,2,1] = actState[0] # set column to portal entrance column
+                    self.q_table[expState[0]+0,expState[1]-1,3,1] = actState[1] # set row to portal entrance row
+                if expState[1]!=self.mazeLength-1 and self.q_table[expState[0]+0,expState[1]+1,0,0]>0: # south of portal exit, not on southern edge, not a wall, not in goalState
+                    self.q_table[expState[0]+0,expState[1]+1,2,0] = actState[0] # set column to portal entrance column
+                    self.q_table[expState[0]+0,expState[1]+1,3,0] = actState[1] # set row to portal entrance row
+                if expState[0]!=self.mazeLength-1 and self.q_table[expState[0]+1,expState[1]+0,0,3]>0: # east of portal exit, not on eastern edge, not a wall, not in goalState
+                    self.q_table[expState[0]+1,expState[1]+0,2,3] = actState[0] # set column to portal entrance column
+                    self.q_table[expState[0]+1,expState[1]+0,3,3] = actState[1] # set row to portal entrance row
+                if expState[0]!=0 and self.q_table[expState[0]-1,expState[1]+0,0,2]>0: # west of portal exit, not on western edge, not a wall, not in goalState
+                    self.q_table[expState[0]-1,expState[1]+0,2,2] = actState[0] # set column to portal entrance column
+                    self.q_table[expState[0]-1,expState[1]+0,3,2] = actState[1] # set row to portal entrance row
+                # Update cells surrounding new portal exit
+                if actState[1]!=0 and self.q_table[actState[0]+0,actState[1]-1,0,1]>0: # north of portal exit, not on northern edge, not a wall, not in goalState
+                    self.q_table[actState[0]+0,actState[1]-1,2,1] = expState[0] # set column to portal entrance column
+                    self.q_table[actState[0]+0,actState[1]-1,3,1] = expState[1] # set row to portal entrance row
+                if actState[1]!=self.mazeLength-1 and self.q_table[actState[0]+0,actState[1]+1,0,0]>0: # south of portal exit, not on southern edge, not a wall, not in goalState
+                    self.q_table[actState[0]+0,actState[1]+1,2,0] = expState[0] # set column to portal entrance column
+                    self.q_table[actState[0]+0,actState[1]+1,3,0] = expState[1] # set row to portal entrance row
+                if actState[0]!=self.mazeLength-1 and self.q_table[actState[0]+1,actState[1]+0,0,3]>0: # east of portal exit, not on eastern edge, not a wall, not in goalState
+                    self.q_table[actState[0]+1,actState[1]+0,2,3] = expState[0] # set column to portal entrance column
+                    self.q_table[actState[0]+1,actState[1]+0,3,3] = expState[1] # set row to portal entrance row
+                if actState[0]!=0 and self.q_table[actState[0]-1,actState[1]+0,0,2]>0: # west of portal exit, not on western edge, not a wall, not in goalState
+                    self.q_table[actState[0]-1,actState[1]+0,2,2] = expState[0] # set column to portal entrance column
+                    self.q_table[actState[0]-1,actState[1]+0,3,2] = expState[1] # set row to portal entrance row
 
-        if state==self.state_0: #Hit a wall
-            self.q_table[self.state_0 + (0,action)]=-1 # set forward action as wall
-            self.q_table[oppState + (0,oppAction)]=-1 # set oppAction as wall
-            self.q_table[oppState + (1,oppAction)]+=1 # add a visit to oppAction
-            self.q_table[oppState + (2,oppAction)]=oppState[0] # set oppAction column to same column
-            self.q_table[oppState + (3,oppAction)]=oppState[1] # set oppAction row to same row
-        else:  #Didn't hit a wall
-            best_q = np.amax(self.q_table[state][0])
-            self.q_table[self.state_0 + (0,action)] += self.learning_rate * (reward + self.discount_factor * (best_q) - self.q_table[self.state_0 + (0,action)])
-            oppBest_q = np.amax(self.q_table[self.state_0][0])
-            if oppBest_q>1:
-                test=1 # debug for bad oppBest values
-            if state!=self.goalState: # if not goalState
-                if state==oppState: # if not a portal
-                    self.q_table[state + (0,oppAction)] += self.learning_rate * (reward + self.discount_factor * (oppBest_q) - self.q_table[state + (0,oppAction)])
-                    self.q_table[state + (1,oppAction)]+=1 # add a visit to oppAction
-                else:  #a portal
-                    if state[1]!=0 and self.q_table[state[0]+0,state[1]-1,0,1]>0: # north of portal exit, not on northern edge, not a wall, not in goalState
-                        self.q_table[state[0]+0,state[1]-1,0,1] += self.learning_rate * (reward + self.discount_factor * (oppBest_q) - self.q_table[state[0]+0,state[1]-1,0,1])
-                        self.q_table[state[0]+0,state[1]-1,2,1] = oppState[0] # set column to portal entrance column
-                        self.q_table[state[0]+0,state[1]-1,3,1] = oppState[1] # set row to portal entrance row
-                    if state[1]!=self.mazeLength-1 and self.q_table[state[0]+0,state[1]+1,0,0]>0: # south of portal exit, not on southern edge, not a wall, not in goalState
-                        self.q_table[state[0]+0,state[1]+1,0,0] += self.learning_rate * (reward + self.discount_factor * (oppBest_q) - self.q_table[state[0]+0,state[1]+1,0,0])
-                        self.q_table[state[0]+0,state[1]+1,2,0] = oppState[0] # set column to portal entrance column
-                        self.q_table[state[0]+0,state[1]+1,3,0] = oppState[1] # set row to portal entrance row
-                    if state[0]!=self.mazeLength-1 and self.q_table[state[0]+1,state[1]+0,0,3]>0: # east of portal exit, not on eastern edge, not a wall, not in goalState
-                        self.q_table[state[0]+1,state[1]+0,0,3] += self.learning_rate * (reward + self.discount_factor * (oppBest_q) - self.q_table[state[0]+1,state[1]+0,0,3])
-                        self.q_table[state[0]+1,state[1]+0,2,3] = oppState[0] # set column to portal entrance column
-                        self.q_table[state[0]+1,state[1]+0,3,3] = oppState[1] # set row to portal entrance row
-                    if state[0]!=0 and self.q_table[state[0]-1,state[1]+0,0,2]>0: # west of portal exit, not on western edge, not a wall, not in goalState
-                        self.q_table[state[0]-1,state[1]+0,0,2] += self.learning_rate * (reward + self.discount_factor * (oppBest_q) - self.q_table[state[0]-1,state[1]+0,0,2])
-                        self.q_table[state[0]-1,state[1]+0,2,2] = oppState[0] # set column to portal entrance column
-                        self.q_table[state[0]-1,state[1]+0,3,2] = oppState[1] # set row to portal entrance row
-
-        if update_q==1:
             self.q_table_update()
 
         # Setting up for the next iteration and update the current state
@@ -346,4 +337,6 @@ class Xavilan(BaseAgent):
                     #Fixed bug of updating reward of portal exit if a wall was already known.
                     #Fixed bug not updating visits to portals.
 #04/13/2019 03:47pm: Added random number to q value when selecting as a tie breaker.
-#04/13/2019 04:21pm: action is now q values + 10 for unexplored action + random for tie breaking
+#04/13/2019 04:21pm: Action is now q values + 10 for unexplored action + random for tie breaking
+#04/14/2019 02:11pm: Added update of action coordinates into a new portal entrance.
+                    #Moved all updates of q into q_table_update method.
