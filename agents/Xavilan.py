@@ -41,7 +41,7 @@ class Xavilan(BaseAgent):
         # Create q-table which is used in the Q-Learning algorithm.
         # It builds a multi-dimensional array derived from maze dimension + possible actions.
         # For this example, it establishes a 3-dimensional array with this size [10, 10, 4].
-        self.q_table = np.zeros(self.maze_size + (4,self.space_action_n), dtype=float) # StateCol, StateRow, ActionRewards, ActionVisits, ActionCol, ActionRow
+        self.q_table = np.zeros(self.maze_size + (6,self.space_action_n), dtype=float) # StateCol, StateRow, Values (Rewards, Visits, outActionCol, outActionRow, inActionCol, inActionCol), Action
 
         # Goal state
         self.goalState=tuple(self.observation_space_high)
@@ -52,53 +52,32 @@ class Xavilan(BaseAgent):
         #Punish
         self.punish=.1/self.mazeLength**2
         
+        # action inverse
+        self.invAction=(1,0,3,2)
+        
+        # Action does this
+        self.colRolAction=((0,0,1,-1),(-1,1,0,0)) # (column,row)(N,S,E,W)
+        self.linearPunish=(1,-1,-1,1) #N,S,E,W
+
+
         #Initialize the q_table as if there were no walls or teleporters
         for i in range(len(self.q_table)):  #Columns
             for j in range(len(self.q_table[i])):  #Rows
-                # north
-                if j==0:
-                    self.q_table[i,j,0,0]=-1  # wall
-                    self.q_table[i,j,1,0]=1   # visited
-                    self.q_table[i,j,2,0]=i   # same column
-                    self.q_table[i,j,3,0]=j   # same row
-                else:
-                    self.q_table[i,j,0,0]=1-(self.mazeLength-1-i+self.mazeLength-1-j+1)*self.punish # linear away from goal
-                    self.q_table[i,j,1,0]=0   # unvisited
-                    self.q_table[i,j,2,0]=i   # same column
-                    self.q_table[i,j,3,0]=j-1 # row to the north
-                # south
-                if j==self.mazeLength-1:
-                    self.q_table[i,j,0,1]=-1  # wall
-                    self.q_table[i,j,1,1]=1   # visited
-                    self.q_table[i,j,2,1]=i   # same column
-                    self.q_table[i,j,3,1]=j   # same row
-                else:
-                    self.q_table[i,j,0,1]=1-(self.mazeLength-1-i+self.mazeLength-1-j-1)*self.punish # linear away from goal
-                    self.q_table[i,j,1,1]=0   # unvisited
-                    self.q_table[i,j,2,1]=i   # same column
-                    self.q_table[i,j,3,1]=j+1 # row to the south
-                # east
-                if i==self.mazeLength-1:
-                    self.q_table[i,j,0,2]=-1  # wall
-                    self.q_table[i,j,1,2]=1   # visited
-                    self.q_table[i,j,2,2]=i   # same column
-                    self.q_table[i,j,3,2]=j   # same row
-                else:
-                    self.q_table[i,j,0,2]=1-(self.mazeLength-1-i+self.mazeLength-1-j-1)*self.punish # linear away from goal
-                    self.q_table[i,j,1,2]=0   # unvisited
-                    self.q_table[i,j,2,2]=i+1 # column to the east
-                    self.q_table[i,j,3,2]=j   # same row
-                # west
-                if i==0:
-                    self.q_table[i,j,0,3]=-1  # wall
-                    self.q_table[i,j,1,3]=1   # visited
-                    self.q_table[i,j,2,3]=i   # same column
-                    self.q_table[i,j,3,3]=j   # same row
-                else:
-                    self.q_table[i,j,0,3]=1-(self.mazeLength-1-i+self.mazeLength-1-j+1)*self.punish
-                    self.q_table[i,j,1,3]=0   # unvisited
-                    self.q_table[i,j,2,3]=i-1 # column to the west
-                    self.q_table[i,j,3,3]=j   # same row
+                for k in range(self.space_action_n): #Actions
+                    if k==0 and j==0 or k==1 and j==self.mazeLength-1 or k==2 and i==self.mazeLength-1 or k==3 and i==0: #if on edge
+                        self.q_table[i,j,0,k]=-1  # wall
+                        self.q_table[i,j,1,k]=1   # visited
+                        self.q_table[i,j,2,k]=i   # same column
+                        self.q_table[i,j,3,k]=j   # same row
+                        self.q_table[i,j,4,k]=-1  # nowhere
+                        self.q_table[i,j,5,k]=-1  # nowhere
+                    else:
+                        self.q_table[i,j,0,k]=1-(self.mazeLength-1-i+self.mazeLength-1-j+self.linearPunish[0])*self.punish # linear away from goal
+                        self.q_table[i,j,1,k]=0   # unvisited
+                        self.q_table[i,j,2,k]=i+self.colRolAction[0][k]   # same column
+                        self.q_table[i,j,3,k]=j+self.colRolAction[1][k] # row to the north
+                        self.q_table[i,j,4,k]=i+self.colRolAction[0][k]  # same column
+                        self.q_table[i,j,5,k]=j+self.colRolAction[1][k] # row to the north
         
         # initialize goalState action 
         self.q_table[self.goalState+(0,)][:]=0 # No rewards for leaving the goal
@@ -143,9 +122,6 @@ class Xavilan(BaseAgent):
         self.SOLVED_T = np.prod(self.maze_size, dtype=int)
         self.STREAK_TO_END = 100
         
-        # action inverse
-        self.invAction=(1,0,3,2)
-
     # It's the function to map the observed state received from the environment
     # to bucket as the internal dataset keeping the state info. For this example,
     # there is no need for scaling, but I prefer to use this function as I wasn't
@@ -341,3 +317,4 @@ class Xavilan(BaseAgent):
 #04/14/2019 02:11pm: Added update of action coordinates into a new portal entrance.
                     #Moved all updates of q into q_table_update method.
 #04/14/2019 03:00pm: Reversed the scan order of the q_table_update as updates tend to propagate up and left.
+#04/14/2019 04:34pm: Added in looking state coordinates to q_table
