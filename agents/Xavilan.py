@@ -59,8 +59,10 @@ class Xavilan(BaseAgent):
         self.colRolAction=((0,0,1,-1),(-1,1,0,0)) # (column,row)(N,S,E,W)
         self.linearPunish=(1,-1,-1,1) #N,S,E,W
 
+        # Initialize updateBucket
+        self.updateBucket=[]
 
-        #Initialize the q_table as if there were no walls or teleporters
+        # Initialize the q_table as if there were no walls or teleporters
         for i in range(len(self.q_table)):  #Columns
             for j in range(len(self.q_table[i])):  #Rows
                 for k in range(self.space_action_n): #Actions
@@ -205,37 +207,66 @@ class Xavilan(BaseAgent):
                 self.q_table[self.state_0 + (0,action)]=-1 # set forward action as wall
                 self.q_table[self.state_0 + (2,action)]=actState[0] # update expected column of state_0
                 self.q_table[self.state_0 + (3,action)]=actState[1] # update expected row of state_0
-                self.q_table[expState + (0,oppAction)]=-1 # set oppAction of expState as wall
-                self.q_table[expState + (1,oppAction)]+=1 # add a visit to oppAction of expState
-                self.q_table[expState + (2,oppAction)]=expState[0] # set expected column of oppAction of expState to same column
-                self.q_table[expState + (3,oppAction)]=expState[1] # set expected row of oppAction of expState to same row
+                self.q_table[self.state_0 + (4,action)]=-1 # nowhere
+                self.q_table[self.state_0 + (5,action)]=-1 # nowhere
+                oppState=(self.state_0[0]+self.colRolAction[0][action],self.state_0[1]+self.colRolAction[1][action]) # state on the opposite side of the wall
+                self.q_table[oppState + (0,oppAction)]=-1 # set oppAction of oppState as wall
+                self.q_table[oppState + (1,oppAction)]+=1 # add a visit to oppAction of oppState
+                self.q_table[oppState + (2,oppAction)]=oppState[0] # set expected column of oppAction of oppState to same column
+                self.q_table[oppState + (3,oppAction)]=oppState[1] # set expected row of oppAction of oppState to same row
+                self.q_table[expState + (4,oppAction)]=-1 # doesn't lead to expected state
+                self.q_table[expState + (5,oppAction)]=-1 # doesn't lead to expected state
+
+                self.updateBucket.append(self.state_0)  # append to update bucket
+                self.updateBucket.append(expState) # append to update bucket
+                if expState!=oppState: #if expected state was a portal
+                    self.updateBucket.append(oppState) # append to update bucket
             else: # found a portal
+                # Swap inward looking state between portal entrance and exit
+                for val in range(4,6):
+                    for k in range(self.space_action_n):
+                        temp=self.q_table[expState][val][k]
+                        self.q_table[expState][val][k] = self.q_table[actState][val][k]
+                        self.q_table[actState][val][k]=temp
+
+                self.updateBucket.append(expState) # append to update bucket
                 # Update cells surrounding new portal entrance
                 if expState[1]!=0 and self.q_table[expState[0]+0,expState[1]-1,0,1]>0: # north of portal exit, not on northern edge, not a wall, not in goalState
                     self.q_table[expState[0]+0,expState[1]-1,2,1] = actState[0] # set column to portal entrance column
                     self.q_table[expState[0]+0,expState[1]-1,3,1] = actState[1] # set row to portal entrance row
+                    self.updateBucket.append((expState[0]+0,expState[1]-1)) # append to update bucket
                 if expState[1]!=self.mazeLength-1 and self.q_table[expState[0]+0,expState[1]+1,0,0]>0: # south of portal exit, not on southern edge, not a wall, not in goalState
                     self.q_table[expState[0]+0,expState[1]+1,2,0] = actState[0] # set column to portal entrance column
                     self.q_table[expState[0]+0,expState[1]+1,3,0] = actState[1] # set row to portal entrance row
+                    self.updateBucket.append((expState[0]+0,expState[1]+1)) # append to update bucket
                 if expState[0]!=self.mazeLength-1 and self.q_table[expState[0]+1,expState[1]+0,0,3]>0: # east of portal exit, not on eastern edge, not a wall, not in goalState
                     self.q_table[expState[0]+1,expState[1]+0,2,3] = actState[0] # set column to portal entrance column
                     self.q_table[expState[0]+1,expState[1]+0,3,3] = actState[1] # set row to portal entrance row
+                    self.updateBucket.append((expState[0]+1,expState[1]+0)) # append to update bucket
                 if expState[0]!=0 and self.q_table[expState[0]-1,expState[1]+0,0,2]>0: # west of portal exit, not on western edge, not a wall, not in goalState
                     self.q_table[expState[0]-1,expState[1]+0,2,2] = actState[0] # set column to portal entrance column
                     self.q_table[expState[0]-1,expState[1]+0,3,2] = actState[1] # set row to portal entrance row
+                    self.updateBucket.append((expState[0]-1,expState[1]+0)) # append to update bucket
+
+                self.updateBucket.append(actState) # append to update bucket
                 # Update cells surrounding new portal exit
                 if actState[1]!=0 and self.q_table[actState[0]+0,actState[1]-1,0,1]>0: # north of portal exit, not on northern edge, not a wall, not in goalState
                     self.q_table[actState[0]+0,actState[1]-1,2,1] = expState[0] # set column to portal entrance column
                     self.q_table[actState[0]+0,actState[1]-1,3,1] = expState[1] # set row to portal entrance row
+                    self.updateBucket.append((actState[0]+0,actState[1]-1)) # append to update bucket
                 if actState[1]!=self.mazeLength-1 and self.q_table[actState[0]+0,actState[1]+1,0,0]>0: # south of portal exit, not on southern edge, not a wall, not in goalState
                     self.q_table[actState[0]+0,actState[1]+1,2,0] = expState[0] # set column to portal entrance column
                     self.q_table[actState[0]+0,actState[1]+1,3,0] = expState[1] # set row to portal entrance row
+                    self.updateBucket.append((actState[0]+0,actState[1]+1)) # append to update bucket
                 if actState[0]!=self.mazeLength-1 and self.q_table[actState[0]+1,actState[1]+0,0,3]>0: # east of portal exit, not on eastern edge, not a wall, not in goalState
                     self.q_table[actState[0]+1,actState[1]+0,2,3] = expState[0] # set column to portal entrance column
                     self.q_table[actState[0]+1,actState[1]+0,3,3] = expState[1] # set row to portal entrance row
+                    self.updateBucket.append((actState[0]+1,actState[1]+0)) # append to update bucket
                 if actState[0]!=0 and self.q_table[actState[0]-1,actState[1]+0,0,2]>0: # west of portal exit, not on western edge, not a wall, not in goalState
                     self.q_table[actState[0]-1,actState[1]+0,2,2] = expState[0] # set column to portal entrance column
                     self.q_table[actState[0]-1,actState[1]+0,3,2] = expState[1] # set row to portal entrance row
+                    self.updateBucket.append((actState[0]-1,actState[1]+0)) # append to update bucket
+                test=1 #debug break in portal catcher
 
             self.q_table_update()
 
@@ -274,7 +305,7 @@ class Xavilan(BaseAgent):
     # update the q_table if any walls or portals are discovered
     def q_table_update(self):
         scan=0
-        while True:
+        while len(self.updateBucket)>0:
             scan+=1
             updates=0
             for i in reversed(range(len(self.q_table))):  #Columns
@@ -291,10 +322,10 @@ class Xavilan(BaseAgent):
                             if update_q!=self.q_table[i,j,0,k]:
                                 self.q_table[i,j,0,k]=update_q
                                 updates+=1
-            if updates==0: # Redo the update until there are no more updates
-                break
             if scan>500:
                 test=1 # debug too many scans of the q_table
+            if updates==0: # Redo the update until there are no more updates
+                self.updateBucket=[]
 
 #04/11/2019 04:14pm: Changed learning rate to 1.0 because the maze is deterministic
 #04/11/2019 06:41pm: No discount factor. Step punishment and final reward all the same.
@@ -318,3 +349,5 @@ class Xavilan(BaseAgent):
                     #Moved all updates of q into q_table_update method.
 #04/14/2019 03:00pm: Reversed the scan order of the q_table_update as updates tend to propagate up and left.
 #04/14/2019 04:34pm: Added in looking state coordinates to q_table
+#04/14/2019 05:14pm: Fixed news walls next to known portals.
+#04/14/2019 07:32pm: self.updateBucket added along with appends to bucket during wall and portal detections.
