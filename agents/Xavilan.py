@@ -198,6 +198,7 @@ class Xavilan(BaseAgent):
         # best_q also returns the q value of the best possible action in the new state.
         
         expState=(int(self.q_table[self.state_0][2][action]),int(self.q_table[self.state_0][3][action])) # expected state after action out of state_0
+        oppState=(self.state_0[0]+self.colRolAction[0][action],self.state_0[1]+self.colRolAction[1][action]) # state on the opposite side of the wall
         oppAction=self.invAction[action]  #N->S, S->N, E->W, W->E
 
         self.q_table[self.state_0 + (1,action)]+=1 # add a visit
@@ -208,9 +209,9 @@ class Xavilan(BaseAgent):
                 self.q_table[self.state_0 + (0,action)]=-1 # set forward action as wall
                 self.q_table[self.state_0 + (2,action)]=actState[0] # update expected column of state_0
                 self.q_table[self.state_0 + (3,action)]=actState[1] # update expected row of state_0
-                self.q_table[self.state_0 + (4,action)]=-1 # nowhere
-                self.q_table[self.state_0 + (5,action)]=-1 # nowhere
-                oppState=(self.state_0[0]+self.colRolAction[0][action],self.state_0[1]+self.colRolAction[1][action]) # state on the opposite side of the wall
+                if (self.q_table[self.state_0 + (4,action)],self.q_table[self.state_0 + (5,action)])==oppState: #if the in looking action is from oppState, then state_0 is not on a portal
+                    self.q_table[self.state_0 + (4,action)]=-1 # nowhere
+                    self.q_table[self.state_0 + (5,action)]=-1 # nowhere
                 self.q_table[oppState + (0,oppAction)]=-1 # set oppAction of oppState as wall
                 self.q_table[oppState + (1,oppAction)]+=1 # add a visit to oppAction of oppState
                 self.q_table[oppState + (2,oppAction)]=oppState[0] # set expected column of oppAction of oppState to same column
@@ -218,19 +219,24 @@ class Xavilan(BaseAgent):
                 self.q_table[expState + (4,oppAction)]=-1 # doesn't lead to expected state
                 self.q_table[expState + (5,oppAction)]=-1 # doesn't lead to expected state
 
-                self.updateBucket.append(self.state_0+(np.amax(self.q_table[self.state_0][0]),))  # append to update bucket
-                self.updateBucket.append(expState+(np.amax(self.q_table[expState][0]),)) # append to update bucket
-                if expState!=oppState: #if expected state was a portal
-                    self.updateBucket.append(oppState+(np.amax(self.q_table[oppState][0]),)) # append to update bucket
+                if not(self.state_0 in [i[0:2] for i in self.updateBucket]): # if state_0 is not in the update bucket
+                    self.updateBucket.append(self.state_0+(np.amax(self.q_table[self.state_0][0]),))  # append to update bucket
+                if not(expState in [i[0:2] for i in self.updateBucket]): # if expState is not in the update bucket
+                    self.updateBucket.append(expState+(np.amax(self.q_table[expState][0]),)) # append to update bucket
+                if expState!=oppState and not(oppState in [i[0:2] for i in self.updateBucket]): #if expected state was a portal and oppState is not in update bucket
+                    self.updateBucket.append(oppState+(np.amax(self.q_table[oppState][0]),)) # append the oppState behind the new wall
             else: # found a portal
                 # Swap inward looking state between portal entrance and exit
-                for val in range(4,6):
-                    for k in range(self.space_action_n):
+                test=1
+                for k in range(self.space_action_n):
+                    for val in range(4,6):
                         temp=self.q_table[expState][val][k]
                         self.q_table[expState][val][k] = self.q_table[actState][val][k]
                         self.q_table[actState][val][k]=temp
+                test=1
 
-                self.updateBucket.append(expState+(np.amax(self.q_table[expState][0]),)) # append to update bucket
+                if not(expState in [i[0:2] for i in self.updateBucket]): # if expState is not in the update bucket
+                    self.updateBucket.append(expState+(np.amax(self.q_table[expState][0]),)) # append to update bucket
                 # Update cells surrounding new portal entrance
                 for k in range(self.space_action_n):
                     kstate=(expState[0]+self.colRolAction[0][k],expState[1]+self.colRolAction[1][k])
@@ -240,9 +246,9 @@ class Xavilan(BaseAgent):
                     and self.q_table[kstate][0][invK]>0: # north of portal exit, not on northern edge, not a wall, not in goalState
                         self.q_table[kstate][2][invK] = actState[0] # set column to portal entrance column
                         self.q_table[kstate][3][invK] = actState[1] # set row to portal entrance row
-                        self.updateBucket.append(kstate+(np.amax(self.q_table[kstate][0]),)) # append to update bucket
-
-                self.updateBucket.append(actState+(np.amax(self.q_table[actState][0]),)) # append to update bucket
+                        self.q_action_update(kstate,invK)# update the q value of that state looking back in. If it changes, put that state in the list so states looking into it can be checked.
+                if not(actState in [i[0:2] for i in self.updateBucket]): # if expState is not in the update bucket
+                    self.updateBucket.append(actState+(np.amax(self.q_table[actState][0]),)) # append to update bucket
                 # Update cells surrounding new portal exit
                 for k in range(self.space_action_n):
                     kstate=(actState[0]+self.colRolAction[0][k],actState[1]+self.colRolAction[1][k])
@@ -252,7 +258,7 @@ class Xavilan(BaseAgent):
                     and self.q_table[kstate][0][invK]>0: # north of portal exit, not on northern edge, not a wall, not in goalState
                         self.q_table[kstate][2][invK] = expState[0] # set column to portal entrance column
                         self.q_table[kstate][3][invK] = expState[1] # set row to portal entrance row
-                        self.updateBucket.append(kstate+(np.amax(self.q_table[kstate][0]),)) # append to update bucket
+                        self.q_action_update(kstate,invK)# update the q value of that state looking back in. If it changes, put that state in the list so states looking into it can be checked.
               
                 test=1 #debug break in portal catcher
 
@@ -263,7 +269,7 @@ class Xavilan(BaseAgent):
         self.done = done
         if self.step==400:
             test=1 #debug caught in loop
-        if self.tries==20 and self.state_0==(len(self.q_table)-1,len(self.q_table)-1):
+        if self.tries==20 and self.state_0==self.goalState:
             test=1 # debug for examine end of run
 
     # Give control to stop the episodes if the agent needs!
@@ -296,88 +302,38 @@ class Xavilan(BaseAgent):
     def qkey(self,elem):
         return(elem[2])
 
-    # Update a q value of one action of one state
+    # Update a q value of one action of one state. If that value changes, add the state to the update bucket to check the states looking in
     def q_action_update(self,updateState,action):
-        state=(int(self.q_table[updateState][2][action]),int(self.q_table[updateState][3][action])) # state looking out from updateState
-        if self.q_table[updateState][0][action]>0: # if not a wall and not in goalState
-            best_q=np.amax(self.q_table[state][0]) # expected q after arriving at action state
-            if state==self.goalState:
-                reward=1
-            else:
-                reward=-self.punish
-            update_q=reward+best_q # calculated q for that action
+        if updateState!=(-1,-1):
             current_q=self.q_table[updateState][0][action] # current q for that action
-            if current_q!=update_q:  # if the q's are different
-                self.q_table[updateState][0][k]=update_q # update the q for that direction
-                self.updateBucket.append(state+(np.amax(self.q_table[state][0]),)) # add looking state to updateBucket
+            if current_q>0: # if not a wall and not in goalState
+                state=(int(self.q_table[updateState][2][action]),int(self.q_table[updateState][3][action])) # state looking out from updateState
+                best_q=np.amax(self.q_table[state][0]) # expected q after arriving at action state
+                if state==self.goalState:
+                    reward=1
+                else:
+                    reward=-self.punish
+                update_q=reward+best_q # calculated q for that action
+                if current_q!=update_q:  # if the q's are different
+                    self.q_table[updateState][0][action]=update_q # update the q for that direction
+                    if not(updateState in [i[0:2] for i in self.updateBucket]):
+                        self.updateBucket.append(updateState+(np.amax(self.q_table[updateState][0]),)) # add state looking out to updateBucket to check states looking back in
 
     # update the q_table if any walls or portals are discovered
     def q_table_update(self):
         scan=0
-        while len(self.updateBucket)>0:
+        while len(self.updateBucket)>0: # while the bucket is not empty
             scan+=1
             self.updateBucket.sort(key=self.qkey, reverse=True) #Sort the Bucket in reverse q expected order
             
-            updateState=(self.updateBucket[0][0:2])
-            #Looking out
-            for k in range(self.space_action_n): #Actions
-                state=(int(self.q_table[updateState][2][k]),int(self.q_table[updateState][3][k]))
-                if self.q_table[updateState][0][k]>0: # if not a wall and not in goalState
-                    best_q=np.amax(self.q_table[state][0])
-                    if state==self.goalState:
-                        reward=1
-                    else:
-                        reward=-self.punish
-                    update_q=reward+best_q
-                    current_q=self.q_table[updateState][0][k]
-                    if current_q!=update_q:
-                        self.q_table[updateState][0][k]=update_q
+            updateState=self.updateBucket.pop(0)[0:2] #pull out the first in bucket
             #Looking back
-            best_q=np.amax(self.q_table[updateState][0])
-            if updateState==self.goalState:
-                reward=1
-            else:
-                reward=-self.punish
-            update_q=reward+best_q
-            for k in range(self.space_action_n): #Actions
-                state=(int(self.q_table[updateState][4][k]),int(self.q_table[updateState][5][k]))
-                if not(state in [i[0:2] for i in self.updateBucket]): #Only proceed if not already in the bucket
-                    if self.q_table[updateState][0][k]>0 and state!=(-1,-1): # if not a wall and not in goalState and a state is looking back
-                        current_q=self.q_table[state][0][self.invAction[k]]
-                        if current_q!=update_q: #if the update changed the expect q
-                            self.updateBucket.append(state+(np.amax(self.q_table[state][0]),)) # add looking state to updateBucket
-            self.updateBucket.pop(0) # Drop this from bucket
+            for k in range(self.space_action_n): #look back in toward the updateState
+                state=(int(self.q_table[updateState][4][k]),int(self.q_table[updateState][5][k])) # this is the state looking back in from that action
+                self.q_action_update(state,self.invAction[k]) # update the q value of that state looking back in. If it changes, put that state in the list so states looking into it can be checked.
 
             if scan>100000:
                 test=1 # debug too many scans of the q_table
-#            if updates==0: # Redo the update until there are no more updates
-#                self.updateBucket=[]
-
-    # update the q_table if any walls or portals are discovered
-    def q_table_updatex(self):
-        scan=0
-        while len(self.updateBucket)>0:
-            scan+=1
-            updates=0
-            for i in reversed(range(len(self.q_table))):  #Columns
-                for j in reversed(range(len(self.q_table[i]))):  #Rows
-                    for k in range(self.space_action_n): #Actions
-                        state=(int(self.q_table[i,j,2,k]),int(self.q_table[i,j,3,k]))
-                        if self.q_table[i,j,0,k]>0: # if not a wall and not in goalState
-                            best_q=np.amax(self.q_table[state][0])
-                            if state==self.goalState:
-                                reward=1
-                            else:
-                                reward=-self.punish
-                            update_q=reward+best_q
-                            if update_q!=self.q_table[i,j,0,k]:
-                                self.q_table[i,j,0,k]=update_q
-                                updates+=1
-            if scan>500:
-                test=1 # debug too many scans of the q_table
-            if updates==0: # Redo the update until there are no more updates
-                self.updateBucket=[]
-
 
 #04/11/2019 04:14pm: Changed learning rate to 1.0 because the maze is deterministic
 #04/11/2019 06:41pm: No discount factor. Step punishment and final reward all the same.
@@ -403,3 +359,4 @@ class Xavilan(BaseAgent):
 #04/14/2019 04:34pm: Added in looking state coordinates to q_table
 #04/14/2019 05:14pm: Fixed news walls next to known portals.
 #04/14/2019 07:32pm: self.updateBucket added along with appends to bucket during wall and portal detections.
+#04/15/2019 01:51pm: Fixed bug on the state_0 look back when sitting on a portal.
