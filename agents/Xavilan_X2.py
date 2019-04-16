@@ -175,10 +175,10 @@ class Xavilan(BaseAgent):
     # It's called by the simulator
     def select_action(self):
         
-        # q values #(+ 10 for explored just once)# + random scaled to half punishment size for tie breaking
-        action=int(np.argmax(self.q_table[self.state_0][0]*((2*(self.portalCount>=7)-1)**(self.q_table[self.state_0][1]==0))+\
-                         (self.q_table[self.state_0][1]==0)*10*(1-(self.portalCount>=7))+\
-                         self.punish/2*np.random.rand(self.space_action_n)))
+        # q values + 10 for unexplored while entrance is more than 25 expected steps from exit + random scaled to half punishment size for tie breaking
+        action=int(np.argmax(self.q_table[self.state_0][0]\
+                         +(self.q_table[self.state_0][1]==0)*10*(np.amax(self.q_table[0,0][0])<(1-25*self.punish*np.random.rand(self.space_action_n)))\
+                         +self.punish/2*np.random.rand(self.space_action_n)))
         return action
 
     # It's called by the simulator and share the 
@@ -370,3 +370,4 @@ class Xavilan(BaseAgent):
 #04/16/2019 12:25pm: Put back exploring the unsearched but made it go down the worse unsearched path.
                     #Added a portal counter.
                     #Changed select_action to stop exploring the unsearched once all portals are found.
+#04/16/2019 02:22pm: Stop preferring unexplored directs once expected steps is less than 25.
