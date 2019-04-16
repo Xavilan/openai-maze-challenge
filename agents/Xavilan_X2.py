@@ -172,10 +172,10 @@ class Xavilan(BaseAgent):
     # It's called by the simulator
     def select_action(self):
         
-        # q values + 20 for unexplored action + 10 for explored just once + random scaled to half punishment size for tie breaking
+        # q values #(+ 20 for unexplored action + 10 for explored just once)# + random scaled to half punishment size for tie breaking
         action=int(np.argmax(self.q_table[self.state_0][0]+\
-                         (self.q_table[self.state_0][1]==0)*20+\
-                         (self.q_table[self.state_0][1]==1)*10+\
+#                         (self.q_table[self.state_0][1]==0)*20+\
+#                         (self.q_table[self.state_0][1]==1)*10+\
                          self.punish/2*np.random.rand(self.space_action_n)))
         return action
 
@@ -362,3 +362,5 @@ class Xavilan(BaseAgent):
 #04/14/2019 07:32pm: self.updateBucket added along with appends to bucket during wall and portal detections.
 #04/15/2019 01:51pm: Fixed bug on the state_0 look back when sitting on a portal.
 #04/15/2019 02:36pm: Changed to force reexplore an already visited action.
+#04/16/2019 08:54am: Changed named of team to separate it from main team.
+#04/16/2019 09:33am: Commented out the exploring the unsearched.
