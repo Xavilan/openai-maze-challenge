@@ -123,6 +123,9 @@ class Xavilan(BaseAgent):
         self.state_0 = None
         self.SOLVED_T = np.prod(self.maze_size, dtype=int)
         self.STREAK_TO_END = 100
+
+        # initialized the portal counter
+        self.portalCount = 0
         
     # It's the function to map the observed state received from the environment
     # to bucket as the internal dataset keeping the state info. For this example,
@@ -172,10 +175,9 @@ class Xavilan(BaseAgent):
     # It's called by the simulator
     def select_action(self):
         
-        # q values #(+ 20 for unexplored action + 10 for explored just once)# + random scaled to half punishment size for tie breaking
-        action=int(np.argmax(self.q_table[self.state_0][0]+\
-#                         (self.q_table[self.state_0][1]==0)*20+\
-#                         (self.q_table[self.state_0][1]==1)*10+\
+        # q values #(+ 10 for explored just once)# + random scaled to half punishment size for tie breaking
+        action=int(np.argmax(self.q_table[self.state_0][0]*((2*(self.portalCount>=7)-1)**(self.q_table[self.state_0][1]==0))+\
+                         (self.q_table[self.state_0][1]==0)*10*(1-(self.portalCount>=7))+\
                          self.punish/2*np.random.rand(self.space_action_n)))
         return action
 
@@ -227,6 +229,7 @@ class Xavilan(BaseAgent):
                 if expState!=oppState and not(oppState in [i[0:2] for i in self.updateBucket]): #if expected state was a portal and oppState is not in update bucket
                     self.updateBucket.append(oppState+(np.amax(self.q_table[oppState][0]),)) # append the oppState behind the new wall
             else: # found a portal
+                self.portalCount+=1 #increment the portal count
                 # Swap inward looking state between portal entrance and exit
                 test=1
                 for k in range(self.space_action_n):
@@ -364,3 +367,6 @@ class Xavilan(BaseAgent):
 #04/15/2019 02:36pm: Changed to force reexplore an already visited action.
 #04/16/2019 08:54am: Changed named of team to separate it from main team.
 #04/16/2019 09:33am: Commented out the exploring the unsearched.
+#04/16/2019 12:25pm: Put back exploring the unsearched but made it go down the worse unsearched path.
+                    #Added a portal counter.
+                    #Changed select_action to stop exploring the unsearched once all portals are found.
