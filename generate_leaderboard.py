@@ -192,15 +192,15 @@ class Leaderboard:
         p.set_position([box.x0 -0.025, box.y0, box.width * 0.85, box.height]) # resize position
         p.legend(loc='center right', bbox_to_anchor=(1.32, 0.5), ncol=1)
 
-        if os.path.exists("fig") is False:
-            os.mkdir("fig")
-        figure = p.get_figure()
-        figure.savefig(os.path.join("fig", 'result_' + runtime + '.png'), dpi=400)
+#        if os.path.exists("fig") is False:
+#            os.mkdir("fig")
+#        figure = p.get_figure()
+#        figure.savefig(os.path.join("fig", 'result_' + runtime + '.png'), dpi=400)
 
 
     def generate(self, cuncurrency):
         # extract all the agents from branches and prepare the base code for the competition
-        prepare_tournament_code(agents_path=self.agents_path)
+        #prepare_tournament_code(agents_path=self.agents_path)
 
         runtime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.agents = self.get_agents_class()
@@ -226,7 +226,7 @@ class Leaderboard:
             session.commit()
 
         self.export_result(runtime)
-        reset_base_repo()
+        #reset_base_repo()
 
 
 if __name__ == "__main__":
