@@ -157,7 +157,7 @@ class Simulator:
                             print("Finish the game in episode ", episode)
                         break
                 print (self.agent_name[i], total_reward, t+1)
-                results.append((total_reward, t))
+                results.append((total_reward, total_reward**2,t,t**2))
 
 
             except Exception as e:
@@ -200,9 +200,10 @@ if __name__ == "__main__":
                         help="Indicates if it needs to record video of the game. Default = False")
 
     args = parser.parse_args()
-    results=np.zeros((2,2), dtype=float)
+    results=np.zeros((3,4), dtype=float)
     run=0
-    for i in range(100):
+    runmax=10000
+    for i in range(runmax):
         run+=1
         print ('run',run)
         s = Simulator(agent_name=args.agent_name,
@@ -215,9 +216,13 @@ if __name__ == "__main__":
         r = s.run(enable_print=False)
         results[0]+=r[0]
         results[1]+=r[1]
+        results[2][0]+=r[1][0]-r[0][0]
+        results[2][1]+=(r[1][0]-r[0][0])**2
+        results[2][2]+=r[1][2]-r[0][2]
+        results[2][3]+=(r[1][2]-r[0][2])**2
     
-    results=results/run
-    print(results)
+    for j in range(3):
+        print(j+1,results[j][0]/run,(results[j][1]/run-(results[j][0]/run)**2)**0.5,results[j][2]/run,(results[j][3]/run-(results[j][2]/run)**2)**0.5)
     s.close()
 
     

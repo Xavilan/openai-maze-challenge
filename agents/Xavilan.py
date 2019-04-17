@@ -123,6 +123,9 @@ class Xavilan(BaseAgent):
         self.state_0 = None
         self.SOLVED_T = np.prod(self.maze_size, dtype=int)
         self.STREAK_TO_END = 100
+
+        # initialized the portal counter
+        self.portalCount = 0
         
     # It's the function to map the observed state received from the environment
     # to bucket as the internal dataset keeping the state info. For this example,
@@ -148,7 +151,7 @@ class Xavilan(BaseAgent):
     # It's required to be updated by every team.
     def get_info(self):
         return { 
-            'team_name': 'Xavilan',
+            'team_name': 'Xavilan_X2',
             'team member': 'Dan Freimund',
             'version': '1.1.0',
             'slogan': 'Propter quod vincere!',
@@ -172,10 +175,10 @@ class Xavilan(BaseAgent):
     # It's called by the simulator
     def select_action(self):
         
-        # q values + 10 for unexplored action + random scaled to half punishment size for tie breaking
-        action=int(np.argmax(self.q_table[self.state_0][0]+\
-                         (self.q_table[self.state_0][1]==0)*10+\
-                         self.punish/2*np.random.rand(self.space_action_n)))
+        # q values - 1 punishment for unexplored + random scaled to quarter punishment size for tie breaking
+        action=int(np.argmax(self.q_table[self.state_0][0]\
+                         +(self.q_table[self.state_0][1]==0)*self.punish/2\
+                         +self.punish/4*np.random.rand(self.space_action_n)))
         return action
 
     # It's called by the simulator and share the 
@@ -226,6 +229,7 @@ class Xavilan(BaseAgent):
                 if expState!=oppState and not(oppState in [i[0:2] for i in self.updateBucket]): #if expected state was a portal and oppState is not in update bucket
                     self.updateBucket.append(oppState+(np.amax(self.q_table[oppState][0]),)) # append the oppState behind the new wall
             else: # found a portal
+                self.portalCount+=1 #increment the portal count
                 # Swap inward looking state between portal entrance and exit
                 test=1
                 for k in range(self.space_action_n):
@@ -360,3 +364,11 @@ class Xavilan(BaseAgent):
 #04/14/2019 05:14pm: Fixed news walls next to known portals.
 #04/14/2019 07:32pm: self.updateBucket added along with appends to bucket during wall and portal detections.
 #04/15/2019 01:51pm: Fixed bug on the state_0 look back when sitting on a portal.
+#04/15/2019 02:36pm: Changed to force reexplore an already visited action.
+#04/16/2019 08:54am: Changed named of team to separate it from main team.
+#04/16/2019 09:33am: Commented out the exploring the unsearched.
+#04/16/2019 12:25pm: Put back exploring the unsearched but made it go down the worse unsearched path.
+                    #Added a portal counter.
+                    #Changed select_action to stop exploring the unsearched once all portals are found.
+#04/16/2019 02:22pm: Stop preferring unexplored directs once expected steps is less than 25.
+#04/16/2019 08:13pm: Added a step size weight to unexplored to test different constants.

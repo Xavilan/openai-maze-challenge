@@ -175,10 +175,10 @@ class Xavilan(BaseAgent):
     # It's called by the simulator
     def select_action(self):
         
-        # q values + 10 for unexplored while entrance is more than 25 expected steps from exit + random scaled to half punishment size for tie breaking
+        # q values - 1 punishment for unexplored + random scaled to quarter punishment size for tie breaking
         action=int(np.argmax(self.q_table[self.state_0][0]\
-                         +(self.q_table[self.state_0][1]==0)*10*(np.amax(self.q_table[0,0][0])<(1-25*self.punish*np.random.rand(self.space_action_n)))\
-                         +self.punish/2*np.random.rand(self.space_action_n)))
+                         +(self.q_table[self.state_0][1]==0)*self.punish*1\
+                         +self.punish/4*np.random.rand(self.space_action_n)))
         return action
 
     # It's called by the simulator and share the 
