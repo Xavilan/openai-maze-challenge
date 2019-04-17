@@ -151,7 +151,7 @@ class Xavilan(BaseAgent):
     # It's required to be updated by every team.
     def get_info(self):
         return { 
-            'team_name': 'Xavilan_X2',
+            'team_name': 'Xavilan',
             'team member': 'Dan Freimund',
             'version': '1.1.0',
             'slogan': 'Propter quod vincere!',
