@@ -205,9 +205,8 @@ class Xavilan(BaseAgent):
         oppAction=self.invAction[action]  #N->S, S->N, E->W, W->E
 
         self.q_table[self.state_0 + (1,action)]+=1 # add a visit
-        if actState==expState: # if actual state is the expected state
-            self.q_table[actState + (1,oppAction)]+=1 # add a visit to oppAction of actual state
-        else:
+        self.q_table[actState + (1,oppAction)]+=1 # add a visit to oppAction of actual state
+        if actState!=expState: # if actual state is the expected state
             if actState==self.state_0: # found a wall
                 self.q_table[self.state_0 + (0,action)]=-1 # set forward action as wall
                 self.q_table[self.state_0 + (2,action)]=actState[0] # update expected column of state_0
@@ -216,7 +215,6 @@ class Xavilan(BaseAgent):
                     self.q_table[self.state_0 + (4,action)]=-1 # nowhere
                     self.q_table[self.state_0 + (5,action)]=-1 # nowhere
                 self.q_table[oppState + (0,oppAction)]=-1 # set oppAction of oppState as wall
-                self.q_table[oppState + (1,oppAction)]+=1 # add a visit to oppAction of oppState
                 self.q_table[oppState + (2,oppAction)]=oppState[0] # set expected column of oppAction of oppState to same column
                 self.q_table[oppState + (3,oppAction)]=oppState[1] # set expected row of oppAction of oppState to same row
                 self.q_table[expState + (4,oppAction)]=-1 # doesn't lead to expected state
@@ -372,3 +370,4 @@ class Xavilan(BaseAgent):
                     #Changed select_action to stop exploring the unsearched once all portals are found.
 #04/16/2019 02:22pm: Stop preferring unexplored directs once expected steps is less than 25.
 #04/16/2019 08:13pm: Added a step size weight to unexplored to test different constants.
+#04/18/2019 12:06am: Moved visit of oppState oppAction to always, removed wall version of visit. Adjusted if statement accordingly.

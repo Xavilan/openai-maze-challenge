@@ -26,6 +26,16 @@ class Xavilan(BaseAgent):
         self.init_example_agent()
 
 
+    # Number of portals based on map
+    def get_portalCount(self,maze):
+        count={
+            "maze-random-10x10-plus-v0": 3
+            ,"maze-random-20x20-plus-v0": 7
+            ,"maze-random-30x30-plus-v0": 10
+            ,"maze-random-100x100-v0": 0
+            }
+        return count.get(maze,0)
+
     def init_example_agent(self):
         '''
         Creating a Q-Table for each state-action pair
@@ -36,21 +46,31 @@ class Xavilan(BaseAgent):
         # self.observation_space_shape is a tuple showing the dimension of the maze. for this example, it's (2,)
         # and finally, self.maze_size is converted to actual size [10, 10]!
         self.maze_size = tuple((self.observation_space_high + np.ones(self.observation_space_shape)).astype(int))
+
         # Refers to the possible states with the actual dimension. For this example, it's [10, 10] 
         self.num_buckets = self.maze_size
-        # Create q-table which is used in the Q-Learning algorithm.
-        # It builds a multi-dimensional array derived from maze dimension + possible actions.
-        # For this example, it establishes a 3-dimensional array with this size [10, 10, 4].
-        self.q_table = np.zeros(self.maze_size + (6,self.space_action_n), dtype=float) # StateCol, StateRow, Values (Rewards, Visits, outActionCol, outActionRow, inActionCol, inActionCol), Action
+
+        # Maze Length
+        self.mazeLength=self.observation_space_high[0]+1
 
         # Goal state
         self.goalState=tuple(self.observation_space_high)
         
-        # Maze Length
-        self.mazeLength=self.observation_space_high[0]+1
+        # Create q-table which is used in the Q-Learning algorithm.
+        # It builds a multi-dimensional array derived from maze dimension + possible actions.
+        # For this example, it establishes a 3-dimensional array with this size [10, 10, 6, 4].
+        self.q_table = np.zeros(self.maze_size + (6,self.space_action_n), dtype=float) # StateCol, StateRow, Values (Rewards, Visits, outActionCol, outActionRow, inActionCol, inActionCol), Action
+
+        # Initial exploration map
+        self.explored = np.zeros(self.maze_size,dtype=int)
+        self.explored[0,0]=1 # start is known
+        self.explored[self.goalState]=1 # goal is known
         
         #Punish
         self.punish=.1/self.mazeLength**2
+        
+        #Average portal q
+        self.portalAvgQ=1-self.punish*self.mazeLength  #half the steps to get from entrance to goal
         
         # action inverse
         self.invAction=(1,0,3,2)
@@ -61,7 +81,7 @@ class Xavilan(BaseAgent):
 
         # Initialize updateBucket
         self.updateBucket=[]
-
+        
         # Initialize the q_table as if there were no walls or teleporters
         for i in range(len(self.q_table)):  #Columns
             for j in range(len(self.q_table[i])):  #Rows
@@ -126,7 +146,8 @@ class Xavilan(BaseAgent):
 
         # initialized the portal counter
         self.portalCount = 0
-        
+        self.portalTotal = self.get_portalCount(self.maze)
+
     # It's the function to map the observed state received from the environment
     # to bucket as the internal dataset keeping the state info. For this example,
     # there is no need for scaling, but I prefer to use this function as I wasn't
@@ -175,10 +196,52 @@ class Xavilan(BaseAgent):
     # It's called by the simulator
     def select_action(self):
         
-        # q values - 1 punishment for unexplored + random scaled to quarter punishment size for tie breaking
-        action=int(np.argmax(self.q_table[self.state_0][0]\
-                         +(self.q_table[self.state_0][1]==0)*self.punish*1\
-                         +self.punish/4*np.random.rand(self.space_action_n)))
+        # Store important variables locally so I can see them  in the variable explorer in Spyder
+        # And it makes the formula legible
+        state =self.state_0
+        visited=(self.q_table[self.state_0][1]>0) # Has this direction been passed thru?
+        
+        q=self.q_table[self.state_0][0] # Unadjusted expected reward in this direction
+        otherQMax=np.zeros(self.space_action_n) # Initialized Maximum expected reward of the other directions
+        explored=np.zeros(self.space_action_n) # Initialized explored cell directions
+        for i in range(self.space_action_n): # Loop thru the directions
+                ones=np.ones(self.space_action_n)  # Initial mask to get the other max q
+                ones[i]=0.  # Set current direction to zero so only the rest pass thru
+                otherQMax[i]=np.max(q*ones)  # Set the max
+                if i==0 and state[1]==0 or i==1 and state[1]==self.mazeLength-1 or i==2 and state[0]==self.mazeLength-1 or i==3 and state[0]==0: #if along the outer edge
+                    explored[i]=1  # count edge as explored so no portal probability
+                else:
+                    explored[i]=self.explored[state[0]+self.colRolAction[0][i],state[1]+self.colRolAction[1][i]]  # set explored cell directions
+                    
+        if self.mazeLength**2-np.sum(self.explored)!=0:
+            portalProb=2*(self.portalTotal-self.portalCount)/(self.mazeLength**2-np.sum(self.explored))*(1-explored)
+        else:
+            portalProb=0*(1-explored)
+
+        tiebreaker=(self.q_table[self.state_0][0]>0)*self.punish/100*np.random.rand(self.space_action_n)
+        runsRemaining=self.num_episodes-self.tries
+        portalAvgQ=self.portalAvgQ*np.ones(self.space_action_n)
+        walls=(self.q_table[self.state_0][0]==-1)
+        wallProb=.5*(1-visited)+walls
+        stepPunish=self.punish
+
+        # explored are normal q values
+        # unexplored = (1-WallProb)*(
+        #                   PortalProb*(PortalAvgQ+max(PortalAvg-OtherQ,0)*RemainingEpisodes)
+        #                   +(1-PortalProb)*q)
+        #               +WallProb*(-Punish+OtherQ)
+        # + random scaled to 1% of punishment size for tie breaking
+        q_mod=(visited*q              \
+               +(1-visited)                                            \
+                   *((1-wallProb)*(
+                           portalProb   *(portalAvgQ+(portalAvgQ-otherQMax)*(portalAvgQ>otherQMax)*runsRemaining) \
+                         +(1-portalProb)*(q         +(q         -otherQMax)*(q         >otherQMax)*runsRemaining)) \
+                   +wallProb*(-stepPunish+otherQMax))                         \
+               +tiebreaker \
+               )
+
+
+        action=int(np.argmax(q_mod))
         return action
 
     # It's called by the simulator and share the 
@@ -203,11 +266,11 @@ class Xavilan(BaseAgent):
         expState=(int(self.q_table[self.state_0][2][action]),int(self.q_table[self.state_0][3][action])) # expected state after action out of state_0
         oppState=(self.state_0[0]+self.colRolAction[0][action],self.state_0[1]+self.colRolAction[1][action]) # state on the opposite side of the wall
         oppAction=self.invAction[action]  #N->S, S->N, E->W, W->E
+        self.explored[actState]=1
 
-        self.q_table[self.state_0 + (1,action)]+=1 # add a visit
-        if actState==expState: # if actual state is the expected state
-            self.q_table[actState + (1,oppAction)]+=1 # add a visit to oppAction of actual state
-        else:
+        self.q_table[self.state_0 + (1,action)]+=1 # add a visit to action starting state
+        self.q_table[oppState + (1,oppAction)]+=1 # add a visit to oppAction of opp state
+        if actState!=expState: # if actual state is the expected state
             if actState==self.state_0: # found a wall
                 self.q_table[self.state_0 + (0,action)]=-1 # set forward action as wall
                 self.q_table[self.state_0 + (2,action)]=actState[0] # update expected column of state_0
@@ -216,7 +279,6 @@ class Xavilan(BaseAgent):
                     self.q_table[self.state_0 + (4,action)]=-1 # nowhere
                     self.q_table[self.state_0 + (5,action)]=-1 # nowhere
                 self.q_table[oppState + (0,oppAction)]=-1 # set oppAction of oppState as wall
-                self.q_table[oppState + (1,oppAction)]+=1 # add a visit to oppAction of oppState
                 self.q_table[oppState + (2,oppAction)]=oppState[0] # set expected column of oppAction of oppState to same column
                 self.q_table[oppState + (3,oppAction)]=oppState[1] # set expected row of oppAction of oppState to same row
                 self.q_table[expState + (4,oppAction)]=-1 # doesn't lead to expected state
@@ -230,6 +292,8 @@ class Xavilan(BaseAgent):
                     self.updateBucket.append(oppState+(np.amax(self.q_table[oppState][0]),)) # append the oppState behind the new wall
             else: # found a portal
                 self.portalCount+=1 #increment the portal count
+                self.explored[expState]=1  #Both ends of portal count as discovered
+                self.explored[oppState]=1
                 # Swap inward looking state between portal entrance and exit
                 test=1
                 for k in range(self.space_action_n):
@@ -275,7 +339,7 @@ class Xavilan(BaseAgent):
             test=1 #debug caught in loop
         if self.tries==20 and self.state_0==self.goalState:
             test=1 # debug for examine end of run
-
+        
     # Give control to stop the episodes if the agent needs!
     def need_to_stop_episode(self):
         return False
@@ -371,3 +435,6 @@ class Xavilan(BaseAgent):
                     #Added a portal counter.
                     #Changed select_action to stop exploring the unsearched once all portals are found.
 #04/16/2019 02:22pm: Stop preferring unexplored directs once expected steps is less than 25.
+#04/17/2019 02:55pm: Add exploration map of just the cells.
+#04/18/2019 08:40am: Moved visit of oppState oppAction to always, removed wall version of visit. Adjusted if statement accordingly.
+                    #Modified select_action to include probability of hit wall, finding a portal. and effect of multiple episodes.
