@@ -156,7 +156,7 @@ class Simulator:
                         if enable_print is True:
                             print("Finish the game in episode ", episode)
                         break
-                print (self.agent_name[i], total_reward, t+1)
+                print (self.agent_name[i], total_reward, t+1,end=", ")
                 results.append((total_reward, total_reward**2,t,t**2))
 
 
@@ -205,7 +205,7 @@ if __name__ == "__main__":
     runmax=10000
     for i in range(runmax):
         run+=1
-        print ('run',run)
+        print ('run',run,end=": ")
         s = Simulator(agent_name=args.agent_name,
                       maze=args.maze, num_episodes=args.num_episodes, 
                       min_episodes=args.min_episodes, max_t=args.max_t, 
@@ -220,9 +220,12 @@ if __name__ == "__main__":
         results[2][1]+=(r[1][0]-r[0][0])**2
         results[2][2]+=r[1][2]-r[0][2]
         results[2][3]+=(r[1][2]-r[0][2])**2
-    
-    for j in range(3):
+        print(results[2][0]/run,(results[2][1]/run-(results[2][0]/run)**2)**0.5/run**0.5)
+
+    for j in range(2):
         print(j+1,results[j][0]/run,(results[j][1]/run-(results[j][0]/run)**2)**0.5,results[j][2]/run,(results[j][3]/run-(results[j][2]/run)**2)**0.5)
+    print(2,results[2][0]/run,(results[2][1]/run-(results[2][0]/run)**2)**0.5/run**0.5,results[2][2]/run,(results[2][3]/run-(results[2][2]/run)**2)**0.5/run**0.5)
+
     s.close()
 
     

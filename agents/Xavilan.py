@@ -61,7 +61,8 @@ class Xavilan(BaseAgent):
 
         # Initialize updateBucket
         self.updateBucket=[]
-
+        self.qState=np.zeros(self.maze_size)
+        
         # Initialize the q_table as if there were no walls or teleporters
         for i in range(len(self.q_table)):  #Columns
             for j in range(len(self.q_table[i])):  #Rows
@@ -80,6 +81,8 @@ class Xavilan(BaseAgent):
                         self.q_table[i,j,3,k]=j+self.colRolAction[1][k] # row to the north
                         self.q_table[i,j,4,k]=i+self.colRolAction[0][k]  # same column
                         self.q_table[i,j,5,k]=j+self.colRolAction[1][k] # row to the north
+
+                self.qState[j,i]=np.amax(self.q_table[i,j][0]) # For visualization
         
         # initialize goalState action 
         self.q_table[self.goalState+(0,)][:]=0 # No rewards for leaving the goal
@@ -175,7 +178,7 @@ class Xavilan(BaseAgent):
     # It's called by the simulator
     def select_action(self):
         
-        # q values - 1 punishment for unexplored + random scaled to quarter punishment size for tie breaking
+        # q values - 1/2 step for unexplored + random 1/4 step for tie breaking
         action=int(np.argmax(self.q_table[self.state_0][0]\
                          +(self.q_table[self.state_0][1]==0)*self.punish/2\
                          +self.punish/4*np.random.rand(self.space_action_n)))
@@ -205,7 +208,7 @@ class Xavilan(BaseAgent):
         oppAction=self.invAction[action]  #N->S, S->N, E->W, W->E
 
         self.q_table[self.state_0 + (1,action)]+=1 # add a visit
-        self.q_table[actState + (1,oppAction)]+=1 # add a visit to oppAction of actual state
+        self.q_table[oppState + (1,oppAction)]+=1 # add a visit to oppAction of oppState
         if actState!=expState: # if actual state is the expected state
             if actState==self.state_0: # found a wall
                 self.q_table[self.state_0 + (0,action)]=-1 # set forward action as wall
@@ -271,8 +274,10 @@ class Xavilan(BaseAgent):
         self.done = done
         if self.step==400:
             test=1 #debug caught in loop
-        if self.tries==20 and self.state_0==self.goalState:
+        if self.tries==100 and self.state_0==self.goalState:
+            test=np.amax(self.q_table[:,:,0],axis=2).transpose()
             test=1 # debug for examine end of run
+            
 
     # Give control to stop the episodes if the agent needs!
     def need_to_stop_episode(self):
@@ -318,6 +323,7 @@ class Xavilan(BaseAgent):
                 update_q=reward+best_q # calculated q for that action
                 if current_q!=update_q:  # if the q's are different
                     self.q_table[updateState][0][action]=update_q # update the q for that direction
+                    self.qState[updateState[1],updateState[0]]=np.amax(self.q_table[updateState][0]) # for visualization
                     if not(updateState in [i[0:2] for i in self.updateBucket]):
                         self.updateBucket.append(updateState+(np.amax(self.q_table[updateState][0]),)) # add state looking out to updateBucket to check states looking back in
 

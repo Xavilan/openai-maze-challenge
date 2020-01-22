@@ -27,7 +27,7 @@ from gym import wrappers
 '''
 Defining the simulation related constants
 '''
-DEFAULT_MAZE = "maze-random-20x20-plus-v0" #"maze-random-30x30-plus-v0" #"maze-random-100x100-v0" #
+DEFAULT_MAZE = "maze-random-20x20-plus-v0" #"maze-random-30x30-plus-v0" #"maze-random-100x100-v0" #"maze-random-10x10-plus-v0" #
 NUM_EPISODES = 100
 MIN_EPISODES = 100
 MAX_T1 = 10000
